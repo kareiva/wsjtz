@@ -168,6 +168,11 @@
 #include <QHostAddress>
 #include <QStandardItem>
 #include <QDebug>
+#include <QDateTimeEdit>
+#include <QJsonObject>
+#include <QJsonDocument>
+#include <QJsonArray>
+
 
 #include "pimpl_impl.hpp"
 #include "Logger.hpp"
@@ -180,6 +185,7 @@
 #include "item_delegates/ForeignKeyDelegate.hpp"
 #include "item_delegates/FrequencyDelegate.hpp"
 #include "item_delegates/FrequencyDeltaDelegate.hpp"
+#include "item_delegates/MessageItemDelegate.hpp"
 #include "Transceiver/TransceiverFactory.hpp"
 #include "Transceiver/Transceiver.hpp"
 #include "models/Bands.hpp"
@@ -222,6 +228,22 @@ namespace
           |DC                              # District of Columbia
           |DX                              # anyone else
           |SCC                             # Slovenia Contest Club contest
+          |DR|FR|GD|GR|OV|ZH|ZL            # Dutch provinces (also FL,NH,UT,NB,LB)
+          |X01|X02|X03|X04|X05|X06|X07     # 99 neutral exchanges
+          |X08|X09|X10|X11|X12|X13|X14
+          |X15|X16|X17|X18|X19|X20|X21
+          |X22|X23|X24|X25|X26|X27|X28
+          |X29|X30|X31|X32|X33|X34|X35
+          |X36|X37|X38|X39|X40|X41|X42
+          |X43|X44|X45|X46|X47|X48|X49
+          |X50|X51|X52|X53|X54|X55|X56
+          |X57|X58|X59|X60|X61|X62|X63
+          |X64|X65|X66|X67|X68|X69|X70
+          |X71|X72|X73|X74|X75|X76|X77
+          |X78|X79|X80|X81|X82|X83|X84
+          |X85|X86|X87|X88|X89|X90|X91
+          |X92|X93|X94|X95|X96|X97|X98
+          |X99
         )
       )", QRegularExpression::CaseInsensitiveOption | QRegularExpression::ExtendedPatternSyntaxOption};
 
@@ -235,22 +257,23 @@ namespace
         [A-F]\ *                          # class and optional space
         (
            AB|AK|AL|AR|AZ|BC|CO|CT|DE|EB  # ARRL/RAC section
-          |EMA|ENY|EPA|EWA|GA|GTA|IA|ID
-          |IL|IN|KS|KY|LA|LAX|MAR|MB|MDC
-          |ME|MI|MN|MO|MS|MT|NC|ND|NE|NFL
-          |NH|NL|NLI|NM|NNJ|NNY|NT|NTX|NV
-          |OH|OK|ONE|ONN|ONS|OR|ORG|PAC|PE
-          |PR|QC|RI|SB|SC|SCV|SD|SDG|SF
-          |SFL|SJV|SK|SNJ|STX|SV|TN|UT|VA
-          |VI|VT|WCF|WI|WMA|WNY|WPA|WTX
-          |WV|WWA|WY
+          |EMA|ENY|EPA|EWA|GA|GH|IA|ID
+          |IL|IN|KS|KY|LA|LAX|MB|MDC|ME
+          |MI|MN|MO|MS|MT|NB|NC|ND|NE|NFL
+          |NH|NL|NLI|NM|NNJ|NNY|NS|NTX|NV
+          |OH|OK|ONE|ONN|ONS|OR|ORG|PAC
+          |PE|PR|QC|RI|SB|SC|SCV|SD|SDG
+          |SF|SFL|SJV|SK|SNJ|STX|SV|TER
+          |TN|UT|VA|VI|VT|WCF|WI|WMA|WNY
+          |WPA|WTX|WV|WWA|WY
           |DX                             # anyone else
         )
       )", QRegularExpression::CaseInsensitiveOption | QRegularExpression::ExtendedPatternSyntaxOption};
 
   // Magic numbers for file validation
   constexpr quint32 qrg_magic {0xadbccbdb};
-  constexpr quint32 qrg_version {100}; // M.mm
+  constexpr quint32 qrg_version {101}; // M.mm
+  constexpr quint32 qrg_version_100 {100};
 }
 
 
@@ -263,13 +286,27 @@ class FrequencyDialog final
   Q_OBJECT
 
 public:
-  using Item = FrequencyList_v2::Item;
+  using Item = FrequencyList_v2_101::Item;
 
   explicit FrequencyDialog (IARURegions * regions_model, Modes * modes_model, QWidget * parent = nullptr)
     : QDialog {parent}
   {
+    start_date_time_edit_ = new QDateTimeEdit(QDateTime(QDate::currentDate(), QTime(0,0,0,0), Qt::UTC), parent);
+    end_date_time_edit_ = new QDateTimeEdit(QDateTime(QDate::currentDate().addDays(2), QTime(0,0,0,0), Qt::UTC), parent);
+
+    enable_dates_checkbox_ = new QCheckBox {tr ("")};
+    start_date_time_edit_->setDisplayFormat("yyyy.MM.dd hh:mm:ss 'UTC'");
+    start_date_time_edit_->setTimeSpec(Qt::UTC);
+    start_date_time_edit_->setMinimumDate(QDate::currentDate().addDays(-365));
+
+    end_date_time_edit_->setDisplayFormat("yyyy.MM.dd hh:mm:ss 'UTC'");
+    end_date_time_edit_->setTimeSpec(Qt::UTC);
+    end_date_time_edit_->setMinimumDate(QDate::currentDate().addDays(-365));
+    preferred_frequency_checkbox_ = new QCheckBox {tr ("")};
+
     setWindowTitle (QApplication::applicationName () + " - " +
                     tr ("Add Frequency"));
+
     region_combo_box_.setModel (regions_model);
     mode_combo_box_.setModel (modes_model);
 
@@ -277,28 +314,74 @@ public:
     form_layout->addRow (tr ("IARU &Region:"), &region_combo_box_);
     form_layout->addRow (tr ("&Mode:"), &mode_combo_box_);
     form_layout->addRow (tr ("&Frequency (MHz):"), &frequency_line_edit_);
+    form_layout->addRow (tr ("&Preferred for Band/Mode:"), preferred_frequency_checkbox_);
+    form_layout->addRow (tr ("&Description:"), &description_line_edit_);
+    form_layout->addRow (tr ("&Enable Date Range:"), enable_dates_checkbox_);
+    form_layout->addRow (tr ("S&tart:"), start_date_time_edit_);
+    form_layout->addRow (tr ("&End:"), end_date_time_edit_);
+    form_layout->addRow (tr ("&Source:"), &source_line_edit_);
 
     auto main_layout = new QVBoxLayout (this);
     main_layout->addLayout (form_layout);
 
-    auto button_box = new QDialogButtonBox {QDialogButtonBox::Ok | QDialogButtonBox::Cancel};
+    button_box = new QDialogButtonBox {QDialogButtonBox::Ok | QDialogButtonBox::Cancel};
     main_layout->addWidget (button_box);
 
     connect (button_box, &QDialogButtonBox::accepted, this, &FrequencyDialog::accept);
     connect (button_box, &QDialogButtonBox::rejected, this, &FrequencyDialog::reject);
+    connect(start_date_time_edit_, &QDateTimeEdit::dateTimeChanged, this, &FrequencyDialog::checkSaneDates);
+    connect(end_date_time_edit_, &QDateTimeEdit::dateTimeChanged, this, &FrequencyDialog::checkSaneDates);
+    connect(enable_dates_checkbox_, &QCheckBox::stateChanged, this, &FrequencyDialog::toggleValidity);
+    toggleValidity();
   }
+
+    void toggleValidity()
+    {
+        start_date_time_edit_->setEnabled(enable_dates_checkbox_->isChecked());
+        end_date_time_edit_->setEnabled(enable_dates_checkbox_->isChecked());
+        checkSaneDates();
+    }
+
+    void checkSaneDates()
+    {
+        if (enable_dates_checkbox_->isChecked() && start_date_time_edit_->dateTime().isValid() && end_date_time_edit_->dateTime().isValid())
+        {
+            if (start_date_time_edit_->dateTime() > end_date_time_edit_->dateTime())
+            {
+                QMessageBox::warning(this, tr("Invalid Date Range"), tr("Start date must be before end date"));
+                button_box->button(QDialogButtonBox::Ok)->setEnabled(false);
+                return;
+            }
+        }
+        button_box->button(QDialogButtonBox::Ok)->setEnabled(true);
+    }
 
   Item item () const
   {
-    return {frequency_line_edit_.frequency ()
-        , Modes::value (mode_combo_box_.currentText ())
-        , IARURegions::value (region_combo_box_.currentText ())};
+    QDateTime start_time = enable_dates_checkbox_->isChecked() ? start_date_time_edit_->dateTime() : QDateTime();
+    QDateTime end_time = enable_dates_checkbox_->isChecked() ? end_date_time_edit_->dateTime()  : QDateTime();
+    return {
+            frequency_line_edit_.frequency(),
+            Modes::value(mode_combo_box_.currentText()),
+            IARURegions::value(region_combo_box_.currentText()),
+            description_line_edit_.text(), source_line_edit_.text(),
+            start_time,
+            end_time,
+            preferred_frequency_checkbox_->isChecked()
+    };
   }
 
 private:
   QComboBox region_combo_box_;
   QComboBox mode_combo_box_;
   FrequencyLineEdit frequency_line_edit_;
+  QLineEdit description_line_edit_;
+  QLineEdit source_line_edit_;
+  QDialogButtonBox * button_box;
+  QCheckBox *enable_dates_checkbox_;
+  QCheckBox *preferred_frequency_checkbox_;
+  QDateTimeEdit *end_date_time_edit_;
+  QDateTimeEdit *start_date_time_edit_;
 };
 
 
@@ -375,31 +458,7 @@ public:
 };
 
 
-//
-// Class MessageItemDelegate
-//
-//	Item delegate for message entry such as free text message macros.
-//
-class MessageItemDelegate final
-  : public QStyledItemDelegate
-{
-public:
-  explicit MessageItemDelegate (QObject * parent = nullptr)
-    : QStyledItemDelegate {parent}
-  {
-  }
 
-  QWidget * createEditor (QWidget * parent
-                          , QStyleOptionViewItem const& /* option*/
-                          , QModelIndex const& /* index */
-                          ) const override
-  {
-    auto editor = new QLineEdit {parent};
-    editor->setFrame (false);
-    editor->setValidator (new QRegularExpressionValidator {message_alphabet, editor});
-    return editor;
-  }
-};
 
 // Internal implementation of the Configuration class.
 class Configuration::impl final
@@ -477,7 +536,9 @@ private:
   void save_frequencies ();
   void reset_frequencies ();
   void insert_frequency ();
-  FrequencyList_v2::FrequencyItems read_frequencies_file (QString const&);
+  void size_frequency_table_columns();
+
+    FrequencyList_v2_101::FrequencyItems read_frequencies_file (QString const&);
 
   void delete_stations ();
   void insert_station ();
@@ -520,6 +581,7 @@ private:
   Q_SLOT void on_cbAutoLog_clicked(bool);
   Q_SLOT void on_Field_Day_Exchange_textEdited (QString const&);
   Q_SLOT void on_RTTY_Exchange_textEdited (QString const&);
+  Q_SLOT void on_Contest_Name_textEdited (QString const&);
 
   // typenames used as arguments must match registered type names :(
   Q_SIGNAL void start_transceiver (unsigned seqeunce_number) const;
@@ -569,8 +631,8 @@ private:
   IARURegions regions_;
   IARURegions::Region region_;
   Modes modes_;
-  FrequencyList_v2 frequencies_;
-  FrequencyList_v2 next_frequencies_;
+  FrequencyList_v2_101 frequencies_;
+  FrequencyList_v2_101 next_frequencies_;
   StationList stations_;
   StationList next_stations_;
   FrequencyDelta current_offset_;
@@ -593,6 +655,7 @@ private:
   bool highlight_by_mode_;
   bool highlight_only_fields_;
   bool include_WAE_entities_;
+  bool highlight_73_;
   int LotW_days_since_upload_;
 
   TransceiverFactory::ParameterPack rig_params_;
@@ -614,6 +677,7 @@ private:
   QString my_grid_;
   QString FD_exchange_;
   QString RTTY_exchange_;
+  QString Contest_Name_;
 
   qint32 id_interval_;
   qint32 ntrials_;
@@ -647,6 +711,7 @@ private:
   bool decode_at_52s_;
   bool single_decode_;
   bool twoPass_;
+  bool Individual_Contest_Name_;
   bool bSpecialOp_;
   int  SelectedActivity_;
   bool x2ToneSpacing_;
@@ -670,6 +735,8 @@ private:
   bool bLowSidelobes_;
   bool pwrBandTxMemory_;
   bool pwrBandTuneMemory_;
+  bool highlight_DXcall_;
+  bool highlight_DXgrid_;
 
   QAudioDeviceInfo audio_input_device_;
   QAudioDeviceInfo next_audio_input_device_;
@@ -711,6 +778,23 @@ private:
   int ignoreListReset_;
   QString separatorColor_;
   QString alertCmdLine_;
+  bool cb_L_utc_;
+  bool cb_L_db_;
+  bool cb_L_dt_;
+  bool cb_L_freq_;
+  bool cb_L_dxcc_;
+  bool cb_L_distance_;
+  bool cb_L_message_;
+
+  bool cb_R_utc_;
+  bool cb_R_db_;
+  bool cb_R_dt_;
+  bool cb_R_freq_;
+  bool cb_R_dxcc_;
+  bool cb_R_distance_;
+  bool cb_R_message_;
+  int maxRows_;
+
 
   friend class Configuration;
 };
@@ -784,6 +868,7 @@ bool Configuration::enable_VHF_features () const {return m_->enable_VHF_features
 bool Configuration::decode_at_52s () const {return m_->decode_at_52s_;}
 bool Configuration::single_decode () const {return m_->single_decode_;}
 bool Configuration::twoPass() const {return m_->twoPass_;}
+bool Configuration::Individual_Contest_Name() const {return m_->Individual_Contest_Name_;}
 bool Configuration::x2ToneSpacing() const {return m_->x2ToneSpacing_;}
 bool Configuration::x4ToneSpacing() const {return m_->x4ToneSpacing_;}
 bool Configuration::split_mode () const {return m_->split_mode ();}
@@ -805,8 +890,8 @@ Bands const * Configuration::bands () const {return &m_->bands_;}
 StationList * Configuration::stations () {return &m_->stations_;}
 StationList const * Configuration::stations () const {return &m_->stations_;}
 IARURegions::Region Configuration::region () const {return m_->region_;}
-FrequencyList_v2 * Configuration::frequencies () {return &m_->frequencies_;}
-FrequencyList_v2 const * Configuration::frequencies () const {return &m_->frequencies_;}
+FrequencyList_v2_101 * Configuration::frequencies () {return &m_->frequencies_;}
+FrequencyList_v2_101 const * Configuration::frequencies () const {return &m_->frequencies_;}
 QStringListModel * Configuration::macros () {return &m_->macros_;}
 QStringListModel const * Configuration::macros () const {return &m_->macros_;}
 QDir Configuration::save_directory () const {return m_->save_directory_;}
@@ -819,6 +904,9 @@ DecodeHighlightingModel const& Configuration::decode_highlighting () const {retu
 bool Configuration::highlight_by_mode () const {return m_->highlight_by_mode_;}
 bool Configuration::highlight_only_fields () const {return m_->highlight_only_fields_;}
 bool Configuration::include_WAE_entities () const {return m_->include_WAE_entities_;}
+bool Configuration::highlight_73 () const {return m_->highlight_73_;}
+bool Configuration::highlight_DXcall () const {return m_->highlight_DXcall_;}
+bool Configuration::highlight_DXgrid () const {return m_->highlight_DXgrid_;}
 // Z
 QString Configuration::qrzComPw() const {return m_->qrzComPw_;}
 QString Configuration::qrzComUn() const {return m_->qrzComUn_;}
@@ -851,9 +939,9 @@ bool Configuration::clearRX() const {return m_->clearRx_;}
 int Configuration::ignoreListReset() const {return m_->ignoreListReset_;}
 QString Configuration::separatorColor() const {return m_->separatorColor_;}
 QString Configuration::alertCmdLine() const {return m_->alertCmdLine_;}
-
-
-
+QVector<bool> Configuration::columnsLeft() const {return QVector<bool> {m_->cb_L_utc_, m_->cb_L_db_, m_->cb_L_dt_, m_->cb_L_freq_, m_->cb_L_dxcc_, m_->cb_L_distance_, m_->cb_L_message_};}
+QVector<bool> Configuration::columnsRight() const {return QVector<bool> {m_->cb_R_utc_, m_->cb_R_db_, m_->cb_R_dt_, m_->cb_R_freq_, m_->cb_R_dxcc_, m_->cb_R_distance_, m_->cb_R_message_};}
+int Configuration::maxRows() const {return m_->maxRows_;}
 
 void Configuration::set_calibration (CalibrationParams params)
 {
@@ -960,7 +1048,7 @@ QString Configuration::Field_Day_Exchange() const
 {
   return m_->FD_exchange_;
 }
-
+/*
 void Configuration::setEU_VHF_Contest()
 { 
   m_->bSpecialOp_=true;
@@ -969,10 +1057,16 @@ void Configuration::setEU_VHF_Contest()
   m_->SelectedActivity_ = static_cast<int> (SpecialOperatingActivity::EU_VHF);
   m_->write_settings();
 }
+*/
 
 QString Configuration::RTTY_Exchange() const
 {
   return m_->RTTY_exchange_;
+}
+
+QString Configuration::Contest_Name() const
+{
+  return m_->Contest_Name_;
 }
 
 auto Configuration::special_op_id () const -> SpecialOperatingActivity
@@ -986,7 +1080,7 @@ void Configuration::set_location (QString const& grid_descriptor)
   // qDebug () << "Configuration::set_location - location:" << grid_descriptor;
   m_->dynamic_grid_ = grid_descriptor.trimmed ();
 }
-// Z
+
 void Configuration::setSpecial_Hound()
 {
   m_->bSpecialOp_=true;
@@ -1011,7 +1105,6 @@ void Configuration::setSpecial_None()
   m_->ui_->gbSpecialOpActivity->setChecked(m_->bSpecialOp_);
   m_->write_settings();
 }
-
 namespace
 {
 #if defined (Q_OS_MAC)
@@ -1076,6 +1169,7 @@ Configuration::impl::impl (Configuration * self, QNetworkAccessManager * network
   , highlight_by_mode_ {false}
   , highlight_only_fields_ {false}
   , include_WAE_entities_ {false}
+  , highlight_73_ {false}
   , LotW_days_since_upload_ {0}
   , last_port_type_ {TransceiverFactory::Capabilities::none}
   , rig_is_dummy_ {false}
@@ -1105,7 +1199,7 @@ Configuration::impl::impl (Configuration * self, QNetworkAccessManager * network
         throw std::runtime_error {"Failed to create save directory"};
       }
 
-    // we now have a deafult save path that exists
+    // we now have a default save path that exists
 
     // make sure samples directory exists
     QString samples_dir {"samples"};
@@ -1214,6 +1308,7 @@ Configuration::impl::impl (Configuration * self, QNetworkAccessManager * network
   ui_->special_op_activity_button_group->setId (ui_->rbField_Day, static_cast<int> (SpecialOperatingActivity::FIELD_DAY));
   ui_->special_op_activity_button_group->setId (ui_->rbRTTY_Roundup, static_cast<int> (SpecialOperatingActivity::RTTY));
   ui_->special_op_activity_button_group->setId (ui_->rbWW_DIGI, static_cast<int> (SpecialOperatingActivity::WW_DIGI));
+  ui_->special_op_activity_button_group->setId (ui_->rbARRL_Digi, static_cast<int> (SpecialOperatingActivity::ARRL_DIGI));
   ui_->special_op_activity_button_group->setId (ui_->rbFox, static_cast<int> (SpecialOperatingActivity::FOX));
   ui_->special_op_activity_button_group->setId (ui_->rbHound, static_cast<int> (SpecialOperatingActivity::HOUND));
 
@@ -1253,20 +1348,23 @@ Configuration::impl::impl (Configuration * self, QNetworkAccessManager * network
   //
   // setup working frequencies table model & view
   //
-  frequencies_.sort (FrequencyList_v2::frequency_column);
+  frequencies_.sort (FrequencyList_v2_101::frequency_column);
 
   ui_->frequencies_table_view->setModel (&next_frequencies_);
   ui_->frequencies_table_view->horizontalHeader ()->setSectionResizeMode (QHeaderView::ResizeToContents);
+
   ui_->frequencies_table_view->horizontalHeader ()->setResizeContentsPrecision (0);
+  ui_->frequencies_table_view->horizontalHeader ()->moveSection(8, 3); // swap preferred to be in front of description
   ui_->frequencies_table_view->verticalHeader ()->setSectionResizeMode (QHeaderView::ResizeToContents);
   ui_->frequencies_table_view->verticalHeader ()->setResizeContentsPrecision (0);
-  ui_->frequencies_table_view->sortByColumn (FrequencyList_v2::frequency_column, Qt::AscendingOrder);
-  ui_->frequencies_table_view->setColumnHidden (FrequencyList_v2::frequency_mhz_column, true);
+  ui_->frequencies_table_view->sortByColumn (FrequencyList_v2_101::frequency_column, Qt::AscendingOrder);
+  ui_->frequencies_table_view->setColumnHidden (FrequencyList_v2_101::frequency_mhz_column, true);
+  ui_->frequencies_table_view->setColumnHidden (FrequencyList_v2_101::source_column, true);
 
   // delegates
-  ui_->frequencies_table_view->setItemDelegateForColumn (FrequencyList_v2::frequency_column, new FrequencyDelegate {this});
-  ui_->frequencies_table_view->setItemDelegateForColumn (FrequencyList_v2::region_column, new ForeignKeyDelegate {&regions_, 0, this});
-  ui_->frequencies_table_view->setItemDelegateForColumn (FrequencyList_v2::mode_column, new ForeignKeyDelegate {&modes_, 0, this});
+  ui_->frequencies_table_view->setItemDelegateForColumn (FrequencyList_v2_101::frequency_column, new FrequencyDelegate {this});
+  ui_->frequencies_table_view->setItemDelegateForColumn (FrequencyList_v2_101::region_column, new ForeignKeyDelegate {&regions_, 0, this});
+  ui_->frequencies_table_view->setItemDelegateForColumn (FrequencyList_v2_101::mode_column, new ForeignKeyDelegate {&modes_, 0, this});
 
   // actions
   frequency_delete_action_ = new QAction {tr ("&Delete"), ui_->frequencies_table_view};
@@ -1414,6 +1512,7 @@ void Configuration::impl::initialize_models ()
   ui_->decode_at_52s_check_box->setChecked(decode_at_52s_);
   ui_->single_decode_check_box->setChecked(single_decode_);
   ui_->cbTwoPass->setChecked(twoPass_);
+  ui_->cbContestName->setChecked(Individual_Contest_Name_);
   ui_->gbSpecialOpActivity->setChecked(bSpecialOp_);
   ui_->special_op_activity_button_group->button (SelectedActivity_)->setChecked (true);
   ui_->cbx2ToneSpacing->setChecked(x2ToneSpacing_);
@@ -1447,7 +1546,9 @@ void Configuration::impl::initialize_models ()
   ui_->TX_audio_source_button_group->button (rig_params_.audio_source)->setChecked (true);
   ui_->CAT_poll_interval_spin_box->setValue (rig_params_.poll_interval);
   ui_->opCallEntry->setText (opCall_);
+  ui_->udp_server_line_edit->setEnabled(false);
   ui_->udp_server_line_edit->setText (udp_server_name_);
+  ui_->udp_server_line_edit->setEnabled(true);
   on_udp_server_line_edit_editingFinished ();
   ui_->udp_server_port_spin_box->setValue (udp_server_port_);
   load_network_interfaces (ui_->udp_interfaces_combo_box, udp_interface_names_);
@@ -1489,13 +1590,16 @@ void Configuration::impl::initialize_models ()
   ui_->highlight_by_mode_check_box->setChecked (highlight_by_mode_);
   ui_->only_fields_check_box->setChecked (highlight_only_fields_);
   ui_->include_WAE_check_box->setChecked (include_WAE_entities_);
+  //ui_->highlight_73_check_box->setChecked (highlight_73_);
   ui_->LotW_days_since_upload_spin_box->setValue (LotW_days_since_upload_);
-  // Z
+  //ui_->cbHighlightDXcall->setChecked(highlight_DXcall_);
+  //ui_->cbHighlightDXgrid->setChecked(highlight_DXgrid_);
+// Z
   ui_->le_qrzComPw->setText(qrzComPw_);
   ui_->le_qrzComUn->setText(qrzComUn_);
   ui_->cb_disableWriteALL->setChecked(disableWriteALL_);
   ui_->cb_disableWriteFoxQSO->setChecked(disableWriteFoxQSO_);
-  ui_->cb_colourAll->setChecked(colourAll_);
+  //ui_->cb_colourAll->setChecked(colourAll_);
   ui_->cb_autoCQfiltering->setChecked(autoCQfiltering_);
   ui_->cb_rxTotxFreq->setChecked(rxTotxFreq_);
   ui_->cb_udpFiltering->setChecked(udpFiltering_);
@@ -1523,6 +1627,24 @@ void Configuration::impl::initialize_models ()
   ui_->le_separatorColor->setText(separatorColor_);
   ui_->le_alertCmdLine->setText(alertCmdLine_);
 
+  ui_->cb_L_utc->setChecked(cb_L_utc_);
+  ui_->cb_L_db->setChecked(cb_L_db_);
+  ui_->cb_L_dt->setChecked(cb_L_dt_);
+  ui_->cb_L_freq->setChecked(cb_L_freq_);
+  ui_->cb_L_dxcc->setChecked(cb_L_dxcc_);
+  ui_->cb_L_distance->setChecked(cb_L_distance_);
+  ui_->cb_L_message->setChecked(cb_L_message_);
+
+  ui_->cb_R_utc->setChecked(cb_R_utc_);
+  ui_->cb_R_db->setChecked(cb_R_db_);
+  ui_->cb_R_dt->setChecked(cb_R_dt_);
+  ui_->cb_R_freq->setChecked(cb_R_freq_);
+  ui_->cb_R_dxcc->setChecked(cb_R_dxcc_);
+  ui_->cb_R_distance->setChecked(cb_R_distance_);
+  ui_->cb_R_message->setChecked(cb_R_message_);
+
+  ui_->sb_maxRows->setValue(maxRows_);
+
   set_rig_invariants ();
 }
 
@@ -1538,12 +1660,20 @@ void Configuration::impl::done (int r)
 void Configuration::impl::read_settings ()
 {
   SettingsGroup g {settings_, "Configuration"};
+  LOG_INFO(QString{"Configuration Settings (%1)"}.arg(settings_->fileName()));
+  QStringList keys = settings_->allKeys();
+  //Q_FOREACH (auto const& item, keys)
+  //{
+  //  LOG_INFO(QString{"  %1 = %2"}.arg(item).arg(settings_->value(item).toString()));
+  //}
+
   restoreGeometry (settings_->value ("window/geometry").toByteArray ());
 
   my_callsign_ = settings_->value ("MyCall", QString {}).toString ();
   my_grid_ = settings_->value ("MyGrid", QString {}).toString ();
   FD_exchange_ = settings_->value ("Field_Day_Exchange",QString {}).toString ();
   RTTY_exchange_ = settings_->value ("RTTY_Exchange",QString {}).toString ();
+  Contest_Name_ = settings_->value ("Contest_Name",QString {}).toString ();
   ui_->Field_Day_Exchange->setText(FD_exchange_);
   ui_->RTTY_Exchange->setText(RTTY_exchange_);
   if (next_font_.fromString (settings_->value ("Font", QGuiApplication::font ().toString ()).toString ())
@@ -1591,12 +1721,20 @@ void Configuration::impl::read_settings ()
 
   region_ = settings_->value ("Region", QVariant::fromValue (IARURegions::ALL)).value<IARURegions::Region> ();
 
-  if (settings_->contains ("FrequenciesForRegionModes"))
+  LOG_INFO(QString{"Reading frequencies"});
+
+  if (settings_->contains ("FrequenciesForRegionModes_v2"))
     {
-      auto const& v = settings_->value ("FrequenciesForRegionModes");
+      LOG_INFO(QString{"read_settings found FrequenciesForRegionModes_v2"});
+      if (settings_->contains ("FrequenciesForRegionModes"))
+        {
+          LOG_INFO(QString{"read_settings ALSO found FrequenciesForRegionModes"});
+        }
+
+      auto const& v = settings_->value ("FrequenciesForRegionModes_v2");
       if (v.isValid ())
         {
-          frequencies_.frequency_list (v.value<FrequencyList_v2::FrequencyItems> ());
+          frequencies_.frequency_list (v.value<FrequencyList_v2_101::FrequencyItems> ());
         }
       else
         {
@@ -1605,7 +1743,38 @@ void Configuration::impl::read_settings ()
     }
   else
     {
-      frequencies_.reset_to_defaults ();
+      LOG_INFO(QString{"read_settings looking for FrequenciesForRegionModes"});
+      if (settings_->contains ("FrequenciesForRegionModes")) // has the old ones.
+        {
+          LOG_INFO(QString{"found FrequenciesForRegionModes"});
+          auto const& v = settings_->value("FrequenciesForRegionModes");
+          LOG_INFO(QString{"v is %1"}.arg(v.typeName()));
+          if (v.isValid())
+            {
+              LOG_INFO(QString{"read_settings found VALID FrequenciesForRegionModes"});
+              FrequencyList_v2_101::FrequencyItems list;
+              FrequencyList_v2::FrequencyItems v100 = v.value<FrequencyList_v2::FrequencyItems>();
+              LOG_INFO(QString{"read_settings read %1 old_format items from FrequenciesForRegionModes"}.arg(v100.size()));
+
+              Q_FOREACH (auto const& item, v100)
+              {
+                list << FrequencyList_v2_101::Item{item.frequency_, item.mode_, item.region_, QString(), QString(), QDateTime(),
+                                               QDateTime(), false};
+              }
+              LOG_INFO(QString{"converted %1 items to FrequenciesForRegionModes_v2"}.arg(list.size()));
+
+              frequencies_.frequency_list(list);
+            }
+            else
+            {
+              LOG_INFO(QString{"read_settings INVALID FrequenciesForRegionModes"});
+              frequencies_.reset_to_defaults();
+            }
+        }
+      else
+        {
+          frequencies_.reset_to_defaults();
+        }
     }
 
   stations_.station_list (settings_->value ("stations").value<StationList::Stations> ());
@@ -1616,6 +1785,7 @@ void Configuration::impl::read_settings ()
   highlight_by_mode_ = settings_->value("HighlightByMode", false).toBool ();
   highlight_only_fields_ = settings_->value("OnlyFieldsSought", false).toBool ();
   include_WAE_entities_ = settings_->value("IncludeWAEEntities", false).toBool ();
+  highlight_73_ = settings_->value("Highlight73", false).toBool ();
   LotW_days_since_upload_ = settings_->value ("LotWDaysSinceLastUpload", 365).toInt ();
   lotw_users_.set_age_constraint (LotW_days_since_upload_);
 
@@ -1657,6 +1827,7 @@ void Configuration::impl::read_settings ()
   decode_at_52s_ = settings_->value("Decode52",false).toBool ();
   single_decode_ = settings_->value("SingleDecode",false).toBool ();
   twoPass_ = settings_->value("TwoPass",true).toBool ();
+  Individual_Contest_Name_ = settings_->value("Individual_Contest_Name",true).toBool ();
   bSpecialOp_ = settings_->value("SpecialOpActivity",false).toBool ();
   SelectedActivity_ = settings_->value("SelectedActivity",1).toInt (); 
   x2ToneSpacing_ = settings_->value("x2ToneSpacing",false).toBool ();
@@ -1678,7 +1849,9 @@ void Configuration::impl::read_settings ()
   calibration_.slope_ppm = settings_->value ("CalibrationSlopePPM", 0.).toDouble ();
   pwrBandTxMemory_ = settings_->value("pwrBandTxMemory",false).toBool ();
   pwrBandTuneMemory_ = settings_->value("pwrBandTuneMemory",false).toBool ();
-  // Z
+  highlight_DXcall_ = settings_->value("highlight_DXcall",false).toBool ();
+  highlight_DXgrid_ = settings_->value("highlight_DXgrid",false).toBool ();
+// Z
   qrzComUn_ = settings_->value("qrzComUn").toString();
   qrzComPw_ = settings_->value("qrzComPw").toString();
   disableWriteALL_ = settings_->value("disableWriteALL").toBool();
@@ -1710,7 +1883,23 @@ void Configuration::impl::read_settings ()
   ignoreListReset_ = settings_->value("ignoreListReset",0).toInt ();
   separatorColor_ = settings_->value("separatorColor", "#777777").toString();
   alertCmdLine_ = settings_->value("alertCmdLine").toString();
+  cb_L_utc_ = settings_->value("cb_L_utc", true).toBool();
+  cb_L_db_ = settings_->value("cb_L_db", true).toBool();
+  cb_L_dt_ = settings_->value("cb_L_dt", true).toBool();
+  cb_L_freq_ = settings_->value("cb_L_freq", true).toBool();
+  cb_L_dxcc_ = settings_->value("cb_L_dxcc", true).toBool();
+  cb_L_distance_ = settings_->value("cb_L_distance", true).toBool();
+  cb_L_message_ = settings_->value("cb_L_message", true).toBool();
 
+  cb_R_utc_ = settings_->value("cb_R_utc", true).toBool();
+  cb_R_db_ = settings_->value("cb_R_db", true).toBool();
+  cb_R_dt_ = settings_->value("cb_R_dt", true).toBool();
+  cb_R_freq_ = settings_->value("cb_R_freq", true).toBool();
+  cb_R_dxcc_ = settings_->value("cb_R_dxcc", true).toBool();
+  cb_R_distance_ = settings_->value("cb_R_distance", true).toBool();
+  cb_R_message_ = settings_->value("cb_R_message", true).toBool();
+
+  maxRows_ = settings_->value("maxRows",100).toInt ();
 }
 
 void Configuration::impl::find_audio_devices ()
@@ -1748,6 +1937,7 @@ void Configuration::impl::write_settings ()
   settings_->setValue ("MyGrid", my_grid_);
   settings_->setValue ("Field_Day_Exchange", FD_exchange_);
   settings_->setValue ("RTTY_Exchange", RTTY_exchange_);
+  settings_->setValue ("Contest_Name", Contest_Name_);
   settings_->setValue ("Font", font_.toString ());
   settings_->setValue ("DecodedTextFont", decoded_text_font_.toString ());
   settings_->setValue ("IDint", id_interval_);
@@ -1777,12 +1967,13 @@ void Configuration::impl::write_settings ()
   settings_->setValue ("After73", id_after_73_);
   settings_->setValue ("TxQSYAllowed", tx_QSY_allowed_);
   settings_->setValue ("Macros", macros_.stringList ());
-  settings_->setValue ("FrequenciesForRegionModes", QVariant::fromValue (frequencies_.frequency_list ()));
   settings_->setValue ("stations", QVariant::fromValue (stations_.station_list ()));
+  settings_->setValue ("FrequenciesForRegionModes_v2", QVariant::fromValue (frequencies_.frequency_list ()));
   settings_->setValue ("DecodeHighlighting", QVariant::fromValue (decode_highlighing_model_.items ()));
   settings_->setValue ("HighlightByMode", highlight_by_mode_);
   settings_->setValue ("OnlyFieldsSought", highlight_only_fields_);
   settings_->setValue ("IncludeWAEEntities", include_WAE_entities_);
+  settings_->setValue ("Highlight73", highlight_73_);
   settings_->setValue ("LotWDaysSinceLastUpload", LotW_days_since_upload_);
   settings_->setValue ("toRTTY", log_as_RTTY_);
   settings_->setValue ("dBtoComments", report_in_comments_);
@@ -1821,6 +2012,7 @@ void Configuration::impl::write_settings ()
   settings_->setValue ("Decode52", decode_at_52s_);
   settings_->setValue ("SingleDecode", single_decode_);
   settings_->setValue ("TwoPass", twoPass_);
+  settings_->setValue ("Individual_Contest_Name", Individual_Contest_Name_);
   settings_->setValue ("SelectedActivity", SelectedActivity_);
   settings_->setValue ("SpecialOpActivity", bSpecialOp_);
   settings_->setValue ("x2ToneSpacing", x2ToneSpacing_);
@@ -1842,6 +2034,8 @@ void Configuration::impl::write_settings ()
   settings_->setValue ("pwrBandTuneMemory", pwrBandTuneMemory_);
   settings_->setValue ("Region", QVariant::fromValue (region_));
   settings_->setValue ("AutoGrid", use_dynamic_grid_);
+  settings_->setValue ("highlight_DXcall", highlight_DXcall_);
+  settings_->setValue ("highlight_DXgrid", highlight_DXgrid_);
   settings_->sync ();
   // Z
   settings_->setValue ("qrzComUn", qrzComUn_);
@@ -1875,6 +2069,26 @@ void Configuration::impl::write_settings ()
   settings_->setValue("ignoreListReset", ignoreListReset_);
   settings_->setValue("separatorColor", separatorColor_);
   settings_->setValue("alertCmdLine", alertCmdLine_);
+
+  settings_->setValue("cb_L_utc", cb_L_utc_);
+  settings_->setValue("cb_L_db", cb_L_db_);
+  settings_->setValue("cb_L_dt", cb_L_dt_);
+  settings_->setValue("cb_L_freq", cb_L_freq_);
+  settings_->setValue("cb_L_dxcc", cb_L_dxcc_);
+  settings_->setValue("cb_L_distance", cb_L_distance_);
+  settings_->setValue("cb_L_message", cb_L_message_);
+
+  settings_->setValue("cb_R_utc", cb_R_utc_);
+  settings_->setValue("cb_R_db", cb_R_db_);
+  settings_->setValue("cb_R_dt", cb_R_dt_);
+  settings_->setValue("cb_R_freq", cb_R_freq_);
+  settings_->setValue("cb_R_dxcc", cb_R_dxcc_);
+  settings_->setValue("cb_R_distance", cb_R_distance_);
+  settings_->setValue("cb_R_message", cb_R_message_);
+
+  settings_->setValue("maxRows", maxRows_);
+
+
 }
 
 void Configuration::impl::set_rig_invariants ()
@@ -2134,7 +2348,6 @@ TransceiverFactory::ParameterPack Configuration::impl::gather_rig_data ()
 void Configuration::impl::accept ()
 {
   // Called when OK button is clicked.
-
   if (!validate ())
     {
       return;			// not accepting
@@ -2242,6 +2455,7 @@ void Configuration::impl::accept ()
   my_grid_ = ui_->grid_line_edit->text ();
   FD_exchange_= ui_->Field_Day_Exchange->text ().toUpper ();
   RTTY_exchange_= ui_->RTTY_Exchange->text ().toUpper ();
+  Contest_Name_= ui_->Contest_Name->text ().toUpper ();
   spot_to_psk_reporter_ = ui_->psk_reporter_check_box->isChecked ();
   psk_reporter_tcpip_ = ui_->psk_reporter_tcpip_check_box->isChecked ();
   id_interval_ = ui_->CW_id_interval_spin_box->value ();
@@ -2279,6 +2493,7 @@ void Configuration::impl::accept ()
   decode_at_52s_ = ui_->decode_at_52s_check_box->isChecked ();
   single_decode_ = ui_->single_decode_check_box->isChecked ();
   twoPass_ = ui_->cbTwoPass->isChecked ();
+  Individual_Contest_Name_ = ui_->cbContestName->isChecked ();
   bSpecialOp_ = ui_->gbSpecialOpActivity->isChecked ();
   SelectedActivity_ = ui_->special_op_activity_button_group->checkedId();
   x2ToneSpacing_ = ui_->cbx2ToneSpacing->isChecked ();
@@ -2335,7 +2550,7 @@ void Configuration::impl::accept ()
   if (frequencies_.frequency_list () != next_frequencies_.frequency_list ())
     {
       frequencies_.frequency_list (next_frequencies_.frequency_list ());
-      frequencies_.sort (FrequencyList_v2::frequency_column);
+      frequencies_.sort (FrequencyList_v2_101::frequency_column);
     }
 
   if (stations_.station_list () != next_stations_.station_list ())
@@ -2352,6 +2567,7 @@ void Configuration::impl::accept ()
   highlight_by_mode_ = ui_->highlight_by_mode_check_box->isChecked ();
   highlight_only_fields_ = ui_->only_fields_check_box->isChecked ();
   include_WAE_entities_ = ui_->include_WAE_check_box->isChecked ();
+  //highlight_73_ = ui_->highlight_73_check_box->isChecked ();
   LotW_days_since_upload_ = ui_->LotW_days_since_upload_spin_box->value ();
   lotw_users_.set_age_constraint (LotW_days_since_upload_);
 
@@ -2361,8 +2577,10 @@ void Configuration::impl::accept ()
     dynamic_grid_.clear ();
   }
   use_dynamic_grid_ = ui_->use_dynamic_grid->isChecked();
- 
-  // Z
+  //highlight_DXcall_ = ui_->cbHighlightDXcall->isChecked();
+  //highlight_DXgrid_ = ui_->cbHighlightDXgrid->isChecked();
+  Individual_Contest_Name_ = ui_->cbContestName->isChecked();
+// Z
   if (qrzComPw_ != ui_->le_qrzComPw->text() || qrzComUn_ != ui_->le_qrzComUn->text()) {
     qrzComPw_ = ui_->le_qrzComPw->text();
     qrzComUn_ = ui_->le_qrzComUn->text();
@@ -2371,7 +2589,7 @@ void Configuration::impl::accept ()
 
   disableWriteALL_ = ui_->cb_disableWriteALL->isChecked();
   disableWriteFoxQSO_ = ui_->cb_disableWriteFoxQSO->isChecked();
-  colourAll_ = ui_->cb_colourAll->isChecked();
+  //colourAll_ = ui_->cb_colourAll->isChecked();
   rxTotxFreq_ = ui_->cb_rxTotxFreq->isChecked();
   autoCQfiltering_ = ui_->cb_autoCQfiltering->isChecked();
   udpFiltering_ = ui_->cb_udpFiltering->isChecked();
@@ -2398,6 +2616,43 @@ void Configuration::impl::accept ()
   ignoreListReset_ = ui_->sb_ignoreListReset->value();
   separatorColor_ = ui_->le_separatorColor->text();
   alertCmdLine_ = ui_->le_alertCmdLine->text();
+
+
+  if (maxRows_ != ui_->sb_maxRows->value()||
+   cb_L_utc_ != ui_->cb_L_utc->isChecked()||
+   cb_L_db_ != ui_->cb_L_db->isChecked()||
+   cb_L_dt_ != ui_->cb_L_dt->isChecked()||
+   cb_L_freq_ != ui_->cb_L_freq->isChecked()||
+   cb_L_dxcc_ != ui_->cb_L_dxcc->isChecked()||
+   cb_L_distance_ != ui_->cb_L_distance->isChecked()||
+   cb_L_message_ != ui_->cb_L_message->isChecked()||
+   cb_R_utc_ != ui_->cb_R_utc->isChecked()||
+   cb_R_db_ != ui_->cb_R_db->isChecked()||
+   cb_R_dt_ != ui_->cb_R_dt->isChecked()||
+   cb_R_freq_ != ui_->cb_R_freq->isChecked()||
+   cb_R_dxcc_ != ui_->cb_R_dxcc->isChecked()||
+   cb_R_distance_ != ui_->cb_R_distance->isChecked()||
+   cb_R_message_ != ui_->cb_R_message->isChecked()) {
+      cb_L_utc_ = ui_->cb_L_utc->isChecked();
+      cb_L_db_ = ui_->cb_L_db->isChecked();
+      cb_L_dt_ = ui_->cb_L_dt->isChecked();
+      cb_L_freq_ = ui_->cb_L_freq->isChecked();
+      cb_L_dxcc_ = ui_->cb_L_dxcc->isChecked();
+      cb_L_distance_ = ui_->cb_L_distance->isChecked();
+      cb_L_message_ = ui_->cb_L_message->isChecked();
+
+      cb_R_utc_ = ui_->cb_R_utc->isChecked();
+      cb_R_db_ = ui_->cb_R_db->isChecked();
+      cb_R_dt_ = ui_->cb_R_dt->isChecked();
+      cb_R_freq_ = ui_->cb_R_freq->isChecked();
+      cb_R_dxcc_ = ui_->cb_R_dxcc->isChecked();
+      cb_R_distance_ = ui_->cb_R_distance->isChecked();
+      cb_R_message_ = ui_->cb_R_message->isChecked();
+
+      maxRows_ = ui_->sb_maxRows->value();
+
+      Q_EMIT self_->columns_changed();
+  }
 
   write_settings ();		// make visible to all
 }
@@ -2631,6 +2886,28 @@ void Configuration::impl::on_udp_server_line_edit_textChanged (QString const&)
 
 void Configuration::impl::on_udp_server_line_edit_editingFinished ()
 {
+  if (this->isVisible())
+  {
+    int q1,q2,q3,q4;
+    char tmpbuf[2];
+    int n = sscanf(ui_->udp_server_line_edit->text ().trimmed ().toLatin1(), "%d.%d.%d.%d.%1s", &q1, &q2, &q3, &q4, tmpbuf);
+    const char *iperr;
+    switch(n)
+    {
+      case 0: iperr = "Error before first number";break;
+      case 1: iperr = "Error between first and second number";break;
+      case 2: iperr = "Error between second and third number";break;
+      case 3: iperr = "Error between third and fourth number";break;
+      case 4: iperr = ""; break;
+      case 5: iperr = "Invalid characters after IP address"; break;
+      default: iperr = "Unknown error parsing network address";
+    }
+    if (n != 4)
+    {
+       MessageBox::warning_message (this, tr ("Error in network address"), tr (iperr));
+       return;
+    }
+
   if (udp_server_name_edited_)
     {
       auto const& server = ui_->udp_server_line_edit->text ().trimmed ();
@@ -2650,6 +2927,7 @@ void Configuration::impl::on_udp_server_line_edit_editingFinished ()
           check_multicast (ha);
         }
     }
+  }
 }
 
 void Configuration::impl::host_info_results (QHostInfo host_info)
@@ -2690,17 +2968,25 @@ void Configuration::impl::check_multicast (QHostAddress const& ha)
   udp_server_name_edited_ = false;
 }
 
+void Configuration::impl::size_frequency_table_columns()
+{
+  ui_->frequencies_table_view->setVisible(false);
+  ui_->frequencies_table_view->resizeColumnsToContents();
+  ui_->frequencies_table_view->setVisible(true);
+}
+
 void Configuration::impl::delete_frequencies ()
 {
   auto selection_model = ui_->frequencies_table_view->selectionModel ();
   selection_model->select (selection_model->selection (), QItemSelectionModel::SelectCurrent | QItemSelectionModel::Rows);
   next_frequencies_.removeDisjointRows (selection_model->selectedRows ());
-  ui_->frequencies_table_view->resizeColumnToContents (FrequencyList_v2::mode_column);
+  ui_->frequencies_table_view->resizeColumnToContents (FrequencyList_v2_101::mode_column);
+  size_frequency_table_columns ();
 }
 
 void Configuration::impl::load_frequencies ()
 {
-  auto file_name = QFileDialog::getOpenFileName (this, tr ("Load Working Frequencies"), writeable_data_dir_.absolutePath (), tr ("Frequency files (*.qrg);;All files (*.*)"));
+  auto file_name = QFileDialog::getOpenFileName (this, tr ("Load Working Frequencies"), writeable_data_dir_.absolutePath (), tr ("Frequency files (*.qrg *.qrg.json);;All files (*.*)"));
   if (!file_name.isNull ())
     {
       auto const list = read_frequencies_file (file_name);
@@ -2714,24 +3000,42 @@ void Configuration::impl::load_frequencies ()
         {
           next_frequencies_.frequency_list (list); // update the model
         }
+      size_frequency_table_columns();
     }
 }
 
 void Configuration::impl::merge_frequencies ()
 {
-  auto file_name = QFileDialog::getOpenFileName (this, tr ("Merge Working Frequencies"), writeable_data_dir_.absolutePath (), tr ("Frequency files (*.qrg);;All files (*.*)"));
+  auto file_name = QFileDialog::getOpenFileName (this, tr ("Merge Working Frequencies"), writeable_data_dir_.absolutePath (), tr ("Frequency files (*.qrg *.qrg.json);;All files (*.*)"));
   if (!file_name.isNull ())
     {
       next_frequencies_.frequency_list_merge (read_frequencies_file (file_name)); // update the model
+      size_frequency_table_columns();
     }
 }
 
-FrequencyList_v2::FrequencyItems Configuration::impl::read_frequencies_file (QString const& file_name)
+FrequencyList_v2_101::FrequencyItems Configuration::impl::read_frequencies_file (QString const& file_name)
 {
   QFile frequencies_file {file_name};
   frequencies_file.open (QFile::ReadOnly);
   QDataStream ids {&frequencies_file};
-  FrequencyList_v2::FrequencyItems list;
+  FrequencyList_v2_101::FrequencyItems list;
+  FrequencyList_v2::FrequencyItems list_v100;
+
+  // read file as json if ends with qrg.json.
+  if (file_name.endsWith(".qrg.json", Qt::CaseInsensitive))
+    {
+      try
+        {
+          list = FrequencyList_v2_101::from_json_file(&frequencies_file);
+        }
+      catch (ReadFileException const &e)
+        {
+          MessageBox::critical_message(this, tr("Error reading frequency file"), e.message_);
+        }
+      return list;
+    }
+
   quint32 magic;
   ids >> magic;
   if (qrg_magic != magic)
@@ -2750,8 +3054,20 @@ FrequencyList_v2::FrequencyItems Configuration::impl::read_frequencies_file (QSt
     }
 
   // de-serialize the data using version if necessary to
-  // handle old schemata
-  ids >> list;
+  // handle old schema
+  if (version == qrg_version_100)
+    {
+      ids >> list_v100;
+      Q_FOREACH (auto const& item, list_v100)
+        {
+          list << FrequencyList_v2_101::Item{item.frequency_, item.mode_, item.region_, QString(), QString(), QDateTime(),
+                                         QDateTime(), false};
+        }
+    }
+    else
+    {
+      ids >> list;
+    }
 
   if (ids.status () != QDataStream::Ok || !ids.atEnd ())
     {
@@ -2759,18 +3075,21 @@ FrequencyList_v2::FrequencyItems Configuration::impl::read_frequencies_file (QSt
       list.clear ();
       return list;
     }
-
   return list;
 }
 
 void Configuration::impl::save_frequencies ()
 {
-  auto file_name = QFileDialog::getSaveFileName (this, tr ("Save Working Frequencies"), writeable_data_dir_.absolutePath (), tr ("Frequency files (*.qrg);;All files (*.*)"));
+  auto file_name = QFileDialog::getSaveFileName (this, tr ("Save Working Frequencies"), writeable_data_dir_.absolutePath (), tr ("Frequency files (*.qrg *.qrg.json);;All files (*.*)"));
   if (!file_name.isNull ())
     {
+      bool b_write_json = file_name.endsWith(".qrg.json", Qt::CaseInsensitive);
+
       QFile frequencies_file {file_name};
       frequencies_file.open (QFile::WriteOnly);
+
       QDataStream ods {&frequencies_file};
+
       auto selection_model = ui_->frequencies_table_view->selectionModel ();
       if (selection_model->hasSelection ()
           && MessageBox::Yes == MessageBox::query_message (this
@@ -2780,11 +3099,28 @@ void Configuration::impl::save_frequencies ()
                                                                  "Click No to save all.")))
         {
           selection_model->select (selection_model->selection (), QItemSelectionModel::SelectCurrent | QItemSelectionModel::Rows);
-          ods << qrg_magic << qrg_version << next_frequencies_.frequency_list (selection_model->selectedRows ());
+          if (b_write_json)
+            {
+              next_frequencies_.to_json_file(&frequencies_file, "0x" + QString::number(qrg_magic, 16).toUpper(),
+                                               "0x" + QString::number(qrg_version, 16).toUpper(),
+                                               next_frequencies_.frequency_list(selection_model->selectedRows()));
+            } else
+            {
+              ods << qrg_magic << qrg_version << next_frequencies_.frequency_list(selection_model->selectedRows());
+            }
         }
       else
         {
-          ods << qrg_magic << qrg_version << next_frequencies_.frequency_list ();
+          if (b_write_json)
+            {
+              next_frequencies_.to_json_file(&frequencies_file,
+                                               "0x" + QString::number(qrg_magic, 16).toUpper(),
+                                               "0x" + QString::number(qrg_version, 16).toUpper(),
+                                                             next_frequencies_.frequency_list());
+            } else
+            {
+              ods << qrg_magic << qrg_version << next_frequencies_.frequency_list();
+            }
         }
     }
 }
@@ -2798,6 +3134,7 @@ void Configuration::impl::reset_frequencies ()
     {
       next_frequencies_.reset_to_defaults ();
     }
+    size_frequency_table_columns ();
 }
 
 void Configuration::impl::insert_frequency ()
@@ -2805,7 +3142,8 @@ void Configuration::impl::insert_frequency ()
   if (QDialog::Accepted == frequency_dialog_->exec ())
     {
       ui_->frequencies_table_view->setCurrentIndex (next_frequencies_.add (frequency_dialog_->item ()));
-      ui_->frequencies_table_view->resizeColumnToContents (FrequencyList_v2::mode_column);
+      ui_->frequencies_table_view->resizeColumnToContents (FrequencyList_v2_101::mode_column);
+      size_frequency_table_columns();
     }
 }
 
@@ -2898,6 +3236,11 @@ void Configuration::impl::on_Field_Day_Exchange_textEdited (QString const& excha
 void Configuration::impl::on_RTTY_Exchange_textEdited (QString const& exchange)
 {
   ui_->RTTY_Exchange->setText (exchange.toUpper ());
+}
+
+void Configuration::impl::on_Contest_Name_textEdited (QString const& exchange)
+{
+  ui_->Contest_Name->setText (exchange.toUpper ());
 }
 
 bool Configuration::impl::have_rig ()

@@ -45,7 +45,7 @@ if (POLICY CMP0075)
 endif ()
 
 project (wsjtx
-  VERSION 2.5.4.0
+  VERSION 2.6.1.0
   LANGUAGES C CXX Fortran
   )
 set (PROJECT_DESCRIPTION "WSJT-X: Digital Modes for Weak Signal Communications in Amateur Radio")
@@ -80,10 +80,10 @@ set (wsjtx_VERSION "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_
 set (PROJECT_BUNDLE_NAME "WSJT-X")
 set (PROJECT_VENDOR "Joe Taylor, K1JT")
 set (PROJECT_CONTACT "Joe Taylor <k1jt@arrl.net>")
-set (PROJECT_COPYRIGHT "Copyright (C) 2001-2021 by Joe Taylor, K1JT")
-set (PROJECT_HOMEPAGE https://www.physics.princeton.edu/pulsar/K1JT/wsjtx.html)
+set (PROJECT_COPYRIGHT "Copyright (C) 2001-2023 by Joe Taylor, K1JT")
+set (PROJECT_HOMEPAGE https://wsjt.sourceforge.io/wsjtx.html)
 set (PROJECT_MANUAL wsjtx-main)
-set (PROJECT_MANUAL_DIRECTORY_URL https://www.physics.princeton.edu/pulsar/K1JT/wsjtx-doc/)
+set (PROJECT_MANUAL_DIRECTORY_URL https://wsjt.sourceforge.io/wsjtx-doc/)
 set (PROJECT_SAMPLES_URL http://downloads.sourceforge.net/project/wsjt/)
 set (PROJECT_SAMPLES_UPLOAD_DEST frs.sourceforge.net:/home/frs/project/wsjt/)
 
@@ -126,7 +126,8 @@ option (WSJT_GENERATE_DOCS "Generate documentation files." ON)
 option (WSJT_RIG_NONE_CAN_SPLIT "Allow split operation with \"None\" as rig.")
 option (WSJT_TRACE_UDP "Debugging option that turns on UDP message protocol diagnostics.")
 option (WSJT_BUILD_UTILS "Build simulators and code demonstrators." ON)
-
+CMAKE_DEPENDENT_OPTION (WSJT_QDEBUG_IN_RELEASE "Leave Qt debugging statements in Release configuration." OFF
+  "NOT is_debug_build" OFF)
 CMAKE_DEPENDENT_OPTION (WSJT_ENABLE_EXPERIMENTAL_FEATURES "Enable features not fully ready for public releases." ON
   is_debug_build OFF)
 CMAKE_DEPENDENT_OPTION (WSJT_CREATE_WINMAIN
@@ -189,6 +190,7 @@ set (wsjt_qt_CXXSRCS
   widgets/FrequencyDeltaLineEdit.cpp
   item_delegates/CandidateKeyFilter.cpp
   item_delegates/ForeignKeyDelegate.cpp
+  item_delegates/MessageItemDelegate.cpp
   validators/LiveFrequencyValidator.cpp
   GetUserId.cpp
   Audio/AudioDevice.cpp
@@ -239,8 +241,9 @@ set (wsjt_qt_CXXSRCS
   widgets/LazyFillComboBox.cpp
   widgets/CheckableItemComboBox.cpp
   widgets/BandComboBox.cpp
-  widgets/unfilteredview.cpp
-  widgets/pskreporterwidget.cpp
+  #widgets/unfilteredview.cpp
+  #widgets/pskreporterwidget.cpp
+  #widgets/rxtable.cpp
   )
 
 set (wsjt_qtmm_CXXSRCS
@@ -275,6 +278,7 @@ set (wsjtx_CXXSRCS
   widgets/about.cpp
   widgets/astro.cpp
   widgets/messageaveraging.cpp
+  widgets/activeStations.cpp
   widgets/colorhighlighting.cpp
   WSPR/WsprTxScheduler.cpp
   widgets/mainwindow.cpp
@@ -285,6 +289,7 @@ set (wsjtx_CXXSRCS
   widgets/ExportCabrillo.cpp
   widgets/unfilteredview.cpp
   widgets/pskreporterwidget.cpp
+  widgets/rxtable.cpp
   )
 
 set (wsjt_CXXSRCS
@@ -340,6 +345,7 @@ set (wsjt_FSRCS
   lib/timer_module.f90
   lib/wavhdr.f90
   lib/qra/q65/q65_encoding_modules.f90
+  lib/ft8/ft8_a7.f90
 
   # remaining non-module sources
   lib/addit.f90
@@ -386,6 +392,8 @@ set (wsjt_FSRCS
   lib/demod64a.f90
   lib/determ.f90
   lib/downsam9.f90
+  lib/echosim.f90
+  lib/echo_snr.f90
   lib/encode232.f90
   lib/encode4.f90
   lib/encode_msk40.f90
@@ -419,6 +427,7 @@ set (wsjt_FSRCS
   lib/fmtmsg.f90
   lib/foldspec9f.f90
   lib/four2a.f90
+  lib/fspread_lorentz.f90
   lib/ft8/foxfilt.f90
   lib/ft8/foxgen.f90
   lib/ft8/foxgen_wrap.f90
@@ -464,7 +473,6 @@ set (wsjt_FSRCS
   lib/inter_wspr.f90
   lib/jplsubs.f
   lib/jt9fano.f90
-  lib/jtmsg.f90
   lib/libration.f90
   lib/lorentzian.f90
   lib/fst4/lorentzian_fading.f90
@@ -510,6 +518,7 @@ set (wsjt_FSRCS
   lib/refspectrum.f90
   lib/savec2.f90
   lib/save_dxbase.f90
+  lib/save_echo_params.f90
   lib/sec0.f90
   lib/sec_midn.f90
   lib/setup65.f90
@@ -544,6 +553,7 @@ set (wsjt_FSRCS
   lib/sync9.f90
   lib/sync9f.f90
   lib/sync9w.f90
+  lib/test_snr.f90
   lib/timf2.f90
   lib/tweak1.f90
   lib/twkfreq.f90
@@ -656,6 +666,7 @@ set (wsjtx_UISRCS
   widgets/echograph.ui
   widgets/fastgraph.ui
   widgets/messageaveraging.ui
+  widgets/activeStations.ui
   widgets/widegraph.ui
   widgets/logqso.ui
   Configuration.ui
@@ -1135,6 +1146,9 @@ target_link_libraries (jt65sim wsjt_fort wsjt_cxx)
 add_executable (sumsim lib/sumsim.f90)
 target_link_libraries (sumsim wsjt_fort wsjt_cxx)
 
+add_executable (test_snr lib/test_snr.f90)
+target_link_libraries (test_snr wsjt_fort)
+
 add_executable (q65sim lib/qra/q65/q65sim.f90)
 target_link_libraries (q65sim wsjt_fort wsjt_cxx)
 
@@ -1182,6 +1196,9 @@ target_link_libraries (ft8code wsjt_fort wsjt_cxx)
 
 add_executable (ft4code lib/ft4/ft4code.f90)
 target_link_libraries (ft4code wsjt_fort wsjt_cxx)
+
+add_executable (echosim lib/echosim.f90)
+target_link_libraries (echosim wsjt_fort wsjt_cxx)
 
 add_executable (ft8sim lib/ft8/ft8sim.f90)
 target_link_libraries (ft8sim wsjt_fort wsjt_cxx)
@@ -1267,6 +1284,7 @@ set (LANGUAGES
   ja				# Japanese
   #no				# Norwegian
   #pt				# Portuguese
+  ru				# Russian
   #sv				# Swedish
   zh				# Chinese
   zh_HK				# Chinese per Hong Kong
@@ -1450,7 +1468,7 @@ set_target_properties (wsjtx PROPERTIES
   )
 
 target_include_directories (wsjtx PRIVATE ${FFTW3_INCLUDE_DIRS})
-if (APPLE)
+if ((NOT ${OPENMP_FOUND}) OR APPLE)
   target_link_libraries (wsjtx wsjt_fort)
 else ()
   target_link_libraries (wsjtx wsjt_fort_omp)
@@ -1581,7 +1599,7 @@ install (TARGETS jt9 wsprd fmtave fcal fmeasure
 
 if(WSJT_BUILD_UTILS)
 install (TARGETS ft8code jt65code jt9code jt4code msk144code 
-  q65code fst4sim q65sim
+  q65code fst4sim q65sim echosim
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT runtime
   BUNDLE DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT runtime
   )

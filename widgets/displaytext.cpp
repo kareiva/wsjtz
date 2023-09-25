@@ -19,6 +19,7 @@
 #include "Network/LotWUsers.hpp"
 #include "models/DecodeHighlightingModel.hpp"
 #include "logbook/logbook.h"
+#include "Logger.hpp"
 
 #include "qt_helpers.hpp"
 #include "moc_displaytext.cpp"
@@ -99,7 +100,7 @@ void DisplayText::mouseDoubleClickEvent(QMouseEvent *e)
 void DisplayText::insertLineSpacer(QString const& line)
 {
   // Z
-  appendText (line, m_config->separatorColor());
+  insertText (line, m_config->separatorColor());
 }
 
 namespace
@@ -136,11 +137,11 @@ namespace
   }
 }
 
-void DisplayText::appendText(QString const& text, QColor bg, QColor fg
-                             , QString const& call1, QString const& call2)
+void DisplayText::insertText(QString const& text, QColor bg, QColor fg
+                             , QString const& call1, QString const& call2, QTextCursor::MoveOperation location)
 {
   auto cursor = textCursor ();
-  cursor.movePosition (QTextCursor::End);
+  cursor.movePosition (location);
   auto block_format = cursor.blockFormat ();
   auto format = cursor.blockCharFormat ();
   format.setFont (char_font_);
@@ -225,9 +226,25 @@ void DisplayText::appendText(QString const& text, QColor bg, QColor fg
 
 void DisplayText::extend_vertical_scrollbar (int min, int max)
 {
-  if (high_volume_
-      && m_config && m_config->decodes_from_top ())
+  static int mod_last;
+  static int height;
+  if (high_volume_ && m_config && m_config->decodes_from_top ())
     {
+      auto m = modified_vertical_scrollbar_max_;
+      if (m != mod_last) { height = m - mod_last;mod_last = m; }
+      //auto vp_margins2 = viewportMargins ();
+      if (height == 0 && m > viewport()->height()) height =  abs( - viewport()->height());
+      //LOG_INFO ("scrollbar min=" << min << " max="  << max << " mod=" << modified_vertical_scrollbar_max_ << " height=" << viewport()->height() << " top=" << vp_margins2.top() << " bottom=" << vp_margins2.bottom()) << " height=" << height << " mod_last=" << mod_last;
+      if (max > 60000)
+        {
+          QString tmp = toPlainText();
+          while (tmp != NULL && tmp.length() > 100 &&  max > 50000)
+          {
+            tmp.remove(0, tmp.indexOf("\n")+1);
+            max -= height;
+          }
+          setPlainText(tmp);
+        }
       if (max && max != modified_vertical_scrollbar_max_)
         {
           auto vp_margins = viewportMargins ();
@@ -289,6 +306,8 @@ QString DisplayText::appendWorkedB4 (QString message, QString call, QString cons
     gridB4=true;
     gridB4onBand=true;
   }
+
+  if(callB4onBand) m_points=0;
 
   message = message.trimmed ();
 
@@ -385,11 +404,17 @@ QString DisplayText::appendWorkedB4 (QString message, QString call, QString cons
     }
     m_CQPriority=DecodeHighlightingModel::highlight_name(top_highlight);
 
+    if(((m_points == 00) or (m_points == -1)) and m_bDisplayPoints) return message;
     return leftJustifyAppendage (message, extra);
 }
 
-QString DisplayText::leftJustifyAppendage (QString message, QString const& appendage) const
+QString DisplayText::leftJustifyAppendage (QString message, QString const& appendage0) const
 {
+  QString appendage=appendage0;
+  if(m_bDisplayPoints and (m_points>0)) {
+    appendage=" " + QString::number(m_points);
+    if(m_points<10) appendage=" " + appendage;
+  }
   if (appendage.size ())
     {
       // allow for seconds
@@ -411,15 +436,16 @@ void DisplayText::displayDecodedText(DecodedText const& decodedText, QString con
                                      QString const& mode,
                                      bool displayDXCCEntity, LogBook const& logBook,
                                      QString const& currentBand, bool ppfx, bool bCQonly,
-                                     bool haveFSpread, float fSpread, bool incl73, bool colourAll, QString distance, QString state, bool filtered)
+                                     bool haveFSpread, float fSpread, bool bDisplayPoints, int points,
+                                     bool incl73, bool colourAll, QString distance, QString state, bool filtered)
 {
+  m_points=points;
+  m_bDisplayPoints=bDisplayPoints;
   m_bPrincipalPrefix=ppfx;
   QColor bg;
   QColor fg;
   bool CQcall = false;
-  // Z
   auto is_73 = decodedText.messageWords().filter (QRegularExpression {"^(73|RR73)$"}).size();
-
   if (decodedText.string ().contains (" CQ ")
       || decodedText.string ().contains (" CQDX ")
       || decodedText.string ().contains (" QRZ ")
@@ -428,16 +454,7 @@ void DisplayText::displayDecodedText(DecodedText const& decodedText, QString con
       CQcall = true;
     }
 
-  auto for_us = (myCall != "" && (decodedText.indexOf (" " + myCall + " ") >= 0
-                        or decodedText.indexOf (" " + myCall + "/") >= 0
-                        or decodedText.indexOf ("<" + myCall + "/") >= 0
-                        or decodedText.indexOf ("/" + myCall + " ") >= 0
-                        or decodedText.indexOf ("/" + myCall + ">") >= 0
-                        or decodedText.indexOf ("<" + myCall + " ") >= 0
-                        or decodedText.indexOf ("<" + myCall + ">") >= 0
-                        or decodedText.indexOf (" " + myCall + ">") >= 0));
-
-  if (bCQonly && !CQcall && !for_us) return;
+  if (bCQonly && !CQcall) return;
 
   auto message = decodedText.string();
   QString dxCall;
@@ -458,7 +475,7 @@ void DisplayText::displayDecodedText(DecodedText const& decodedText, QString con
       message = message.left (ap_pos).trimmed ();
     }
   m_CQPriority="";
-  if (CQcall || colourAll)
+  if (CQcall || colourAll ||(is_73 && (m_config->highlight_73 ())))
     {
       if (displayDXCCEntity)
         {
@@ -472,7 +489,7 @@ void DisplayText::displayDecodedText(DecodedText const& decodedText, QString con
         {
           message = leftJustifyAppendage (message, extra);
           highlight_types types {Highlight::CQ};
-          if (m_config && m_config->lotw_users ().user (dxCall))
+          if (m_config && m_config->lotw_users ().user (decodedText.CQersCall()))
             {
               types.push_back (Highlight::LotW);
             }
@@ -484,10 +501,19 @@ void DisplayText::displayDecodedText(DecodedText const& decodedText, QString con
       message = leftJustifyAppendage (message, extra);
     }
 
-  if (for_us) {
-     highlight_types types {Highlight::MyCall};
-     set_colours (m_config, &bg, &fg, types);
-   }
+  if (myCall.size ())
+    {
+      QString regexp {"[ <]" + myCall + "[ >]"};
+      if (Radio::is_compound_callsign (myCall))
+        {
+          regexp = "(?:" + regexp + "|[ <]" + Radio::base_callsign (myCall) + "[ >])";
+        }
+      if ((decodedText.clean_string () + " ").contains (QRegularExpression {regexp}))
+        {
+          highlight_types types {Highlight::MyCall};
+          set_colours (m_config, &bg, &fg, types);
+        }
+    }
 
   if (state.length() > 0) {
       message = leftJustifyAppendage (message, "[" + state + "]");
@@ -500,8 +526,7 @@ void DisplayText::displayDecodedText(DecodedText const& decodedText, QString con
   if (filtered)
         message = leftJustifyAppendage (message, "[F]");
 
-
-  appendText (message.trimmed (), bg, fg, decodedText.call (), dxCall);
+  insertText (message.trimmed (), bg, fg, decodedText.call (), dxCall);
 }
 
 
@@ -533,18 +558,19 @@ void DisplayText::displayTransmittedText(QString text, QString modeTx, qint32 tx
     QColor fg;
     highlight_types types {Highlight::Tx};
     set_colours (m_config, &bg, &fg, types);
-    appendText (t, bg, fg);
+    insertText (t, bg, fg);
 }
 
 void DisplayText::displayQSY(QString text)
 {
   QString t = QDateTime::currentDateTimeUtc().toString("hhmmss") + "            " + text;
-  appendText (t, "hotpink");
+  insertText (t, "hotpink");
 }
 
-void DisplayText::displayFoxToBeCalled(QString t, QColor bg, QColor fg)
+void DisplayText::displayHoundToBeCalled(QString t, bool bAtTop, QColor bg, QColor fg)
 {
-  appendText (t, bg, fg);
+  if (bAtTop)  t = t + "\n"; // need a newline when insertion at top
+  insertText(t, bg, fg, "", "", bAtTop ? QTextCursor::Start : QTextCursor::End);
 }
 
 namespace

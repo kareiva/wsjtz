@@ -55,7 +55,6 @@ Astro::Astro(QSettings * settings, Configuration const * configuration, QWidget 
 
 Astro::~Astro ()
 {
-  ui_->cbDopplerTracking->setChecked (false);
   Q_EMIT tracking_update ();
   if (isVisible ()) write_settings ();
 }
@@ -69,6 +68,8 @@ void Astro::closeEvent (QCloseEvent * e)
 void Astro::read_settings ()
 {
   SettingsGroup g (settings_, "Astro");
+  bool b=settings_->value("DopplerTracking",false).toBool();
+  ui_->cbDopplerTracking->setChecked(b);
   ui_->doppler_widget->setVisible (ui_->cbDopplerTracking->isChecked ());
   m_DopplerMethod=settings_->value("DopplerMethod",0).toInt();
   switch (m_DopplerMethod)
@@ -86,13 +87,13 @@ void Astro::read_settings ()
 void Astro::write_settings ()
 {
   SettingsGroup g (settings_, "Astro");
-  //settings_->setValue ("DopplerTracking", ui_->cbDopplerTracking->isChecked ());
+  settings_->setValue ("DopplerTracking", ui_->cbDopplerTracking->isChecked());
   settings_->setValue ("DopplerMethod",m_DopplerMethod);
   settings_->setValue ("window/pos", pos ());
 }
 
 auto Astro::astroUpdate(QDateTime const& t, QString const& mygrid, QString const& hisgrid, Frequency freq,
-                        bool dx_is_self, bool bTx, bool no_tx_QSY, double TR_period) -> Correction
+                        bool bEchoMode, bool bTx, bool bAuto, bool no_tx_QSY, double TR_period) -> Correction
 {
   Frequency freq_moon {freq};
   double azsun,elsun,azmoon,elmoon,azmoondx,elmoondx;
@@ -121,12 +122,6 @@ auto Astro::astroUpdate(QDateTime const& t, QString const& mygrid, QString const
            AzElFileName.toLocal8Bit ().constData (),
            jpleph.toLocal8Bit ().constData ());
 
-    if(!hisgrid.size ()) {
-    azmoondx=0.0;
-    elmoondx=0.0;
-    m_dop=0;
-    width2=0.0;
-  }
   QString message;
   {
     QTextStream out {&message};
@@ -142,14 +137,14 @@ auto Astro::astroUpdate(QDateTime const& t, QString const& mygrid, QString const
       << "Az:     " << azmoon << "\n"
       "El:     " << elmoon << "\n"
       "SelfDop:" << m_dop00 << "\n"
-      "Width:  " << int(width1) << "\n"
+      "Width:  " << int(width1+0.5) << "\n"
       << qSetRealNumberPrecision (2)
       << "Delay:  " << techo << "\n"
       << qSetRealNumberPrecision (1)
       << "DxAz:   " << azmoondx << "\n"
       "DxEl:   " << elmoondx << "\n"
       "DxDop:  " << m_dop << "\n"
-      "DxWid:  " << int(width2) << "\n"
+      "DxWid:  " << int(width2+0.5) << "\n"
       "Dec:    " << decmoon << "\n"
       "SunAz:  " << azsun << "\n"
       "SunEl:  " << elsun << "\n"
@@ -157,7 +152,7 @@ auto Astro::astroUpdate(QDateTime const& t, QString const& mygrid, QString const
     if(freq>=5000000ull) {                     //Suppress data not relevant below VHF
       out << "Tsky:   " << ntsky << "\n"
         "Dpol:   " << poloffset << "\n"
-		"MNR:    " << xnr << "\n"
+        "MNR:    " << xnr << "\n"
         "Dist:   " << int((techo*149896)) << "\n" //wdg
         "Dgrd:   " << dgrd;
     }
@@ -165,7 +160,14 @@ auto Astro::astroUpdate(QDateTime const& t, QString const& mygrid, QString const
   ui_->text_label->setText(message);
 
   Correction correction;
-  if (ui_->cbDopplerTracking->isChecked ()) {
+  correction.dop=m_dop00;
+  correction.width=width1;
+  if(hisgrid!="" and !bAuto) {
+    correction.dop=m_dop;
+    correction.width=width2;
+  }
+  if (ui_->cbDopplerTracking->isChecked()) {
+    ui_->sbRIT->setEnabled(bEchoMode and m_DopplerMethod==0);
     switch (m_DopplerMethod)
       {
       case 1: // All Doppler correction done here; DX station stays at nominal dial frequency.
@@ -176,7 +178,7 @@ auto Astro::astroUpdate(QDateTime const& t, QString const& mygrid, QString const
         break;
         //case 5: // All Doppler correction done here; DX station stays at nominal dial frequency.
       case 3: // Both stations do full correction on Rx and none on Tx
-        //correction.rx = dx_is_self ? m_dop00 : m_dop;
+        //correction.rx = bEchoMode ? m_dop00 : m_dop;
         correction.rx =  m_dop00; // Now always sets RX to *own* echo freq
         break;
       case 2:
@@ -201,7 +203,7 @@ auto Astro::astroUpdate(QDateTime const& t, QString const& mygrid, QString const
       }
     //if (3 != m_DopplerMethod || 4 != m_DopplerMethod) correction.tx = -correction.rx;
     
-    if(dx_is_self && m_DopplerMethod == 1) correction.rx = 0;
+    if(bEchoMode && m_DopplerMethod == 1) correction.rx = 0;
 
     if (no_tx_QSY && 3 != m_DopplerMethod && 0 != m_DopplerMethod)
       {
@@ -235,7 +237,7 @@ auto Astro::astroUpdate(QDateTime const& t, QString const& mygrid, QString const
           {
           case 1:
             // All Doppler correction done here; DX station stays at nominal dial frequency.
-            offset = dx_is_self ? m_dop00 : m_dop;
+            offset = bEchoMode ? m_dop00 : m_dop;
             break;
 
           case 2:
@@ -256,11 +258,14 @@ auto Astro::astroUpdate(QDateTime const& t, QString const& mygrid, QString const
         //qDebug () << "correction.tx (no tx qsy):" << correction.tx;
       }
   }
+
+//  qDebug() << "AA0" << m_DopplerMethod << bAuto << correction.tx << correction.rx << correction.width;
   return correction;
 }
 
 void Astro::check_split ()
 {
+  /*  TEMPORARILY DISABLE
   if (doppler_tracking () && !configuration_->split_mode ())
     {
       MessageBox::warning_message (this, tr ("Doppler Tracking Error"),
@@ -268,6 +273,7 @@ void Astro::check_split ()
                                    tr ("Go to \"Menu->File->Settings->Radio\" to enable split operation"));
       ui_->rbNoDoppler->click ();
     }
+  */
 }
 
 void Astro::on_rbFullTrack_clicked(bool)
@@ -336,4 +342,33 @@ void Astro::hideEvent (QHideEvent * e)
 {
   Q_EMIT tracking_update ();
   QWidget::hideEvent (e);
+}
+
+bool Astro::bDither()
+{
+  return ui_->cbDither->isChecked();
+}
+
+void Astro::selectOwnEcho()
+{
+  ui_->rbOwnEcho->click();
+}
+
+void Astro::selectOnDxEcho()
+{
+  ui_->rbOnDxEcho->click();
+}
+
+qint32 Astro::nfRIT()
+{
+  if(m_DopplerMethod==0) {
+    return ui_->sbRIT->value();
+  } else {
+    return 0;
+  }
+}
+
+qint32 Astro::DopplerMethod()
+{
+  return m_DopplerMethod;
 }

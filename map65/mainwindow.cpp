@@ -372,7 +372,7 @@ void MainWindow::writeSettings()
   settings.setValue("SoundOutIndex",m_nDevOut);
   settings.setValue("paOutDevice",m_paOutDevice);
   settings.setValue("IQswap",m_IQswap);
-  settings.setValue("Plus10dB",m_10db);
+  settings.setValue("Scale_dB",m_dB);
   settings.setValue("IQxt",m_bIQxt);
   settings.setValue("InitIQplus",m_initIQplus);
   settings.setValue("UDPport",m_udpPort);
@@ -447,12 +447,12 @@ void MainWindow::readSettings()
   m_nDevOut = settings.value("SoundOutIndex", 0).toInt();
   m_paOutDevice = settings.value("paOutDevice",0).toInt();
   m_IQswap = settings.value("IQswap",false).toBool();
-  m_10db = settings.value("Plus10dB",false).toBool();
+  m_dB = settings.value("Scale_dB",0).toInt();
   m_initIQplus = settings.value("InitIQplus",false).toBool();
   m_bIQxt = settings.value("IQxt",false).toBool();
   m_udpPort = settings.value("UDPport",50004).toInt();
   soundInThread.setSwapIQ(m_IQswap);
-  soundInThread.set10db(m_10db);
+  soundInThread.setScale(m_dB);
   soundInThread.setPort(m_udpPort);
   ui->actionCuteSDR->setChecked(settings.value(
                                   "PaletteCuteSDR",true).toBool());
@@ -520,6 +520,8 @@ void MainWindow::dataSink(int k)
   static int nkhz;
   static int nfsample=96000;
   static int nxpol=0;
+  static int nsec0=0;
+  static int nsum=0;
   static float fgreen;
   static int ndiskdat;
   static int nb;
@@ -529,6 +531,7 @@ void MainWindow::dataSink(int k)
   static float rejectx;
   static float rejecty;
   static float slimit;
+  static double xsum=0.0;
 
   if(m_diskData) {
     ndiskdat=1;
@@ -551,8 +554,22 @@ void MainWindow::dataSink(int k)
            &nfsample, &fgreen, &m_adjustIQ, &m_applyIQcal,
            &m_gainx, &m_gainy, &m_phasex, &m_phasey, &rejectx, &rejecty,
            &px, &py, s, &nkhz, &ihsym, &nzap, &slimit, lstrong);
+
+  int nsec=QDateTime::currentSecsSinceEpoch();
+  if(nsec==nsec0) {
+    xsum+=pow(10.0,0.1*px);
+    nsum+=1;
+  } else {
+    m_xavg=0.0;
+    if(nsum>0) m_xavg=xsum/nsum;
+    xsum=pow(10.0,0.1*px);
+    nsum=1;
+  }
+  nsec0=nsec;
+
   QString t;
   m_pctZap=nzap/178.3;
+  ui->yMeterFrame->setVisible(m_xpol);
   if(m_xpol) {
     lab4->setText (
                   QString {" Rx noise: %1  %2 %3 %% "}
@@ -682,7 +699,7 @@ void MainWindow::on_actionDeviceSetup_triggered()               //Setup Dialog
   dlg.m_nDevOut=m_nDevOut;
   dlg.m_udpPort=m_udpPort;
   dlg.m_IQswap=m_IQswap;
-  dlg.m_10db=m_10db;
+  dlg.m_dB=m_dB;
   dlg.m_initIQplus=m_initIQplus;
   dlg.m_bIQxt=m_bIQxt;
   dlg.m_cal570=m_cal570;
@@ -719,7 +736,7 @@ void MainWindow::on_actionDeviceSetup_triggered()               //Setup Dialog
     m_paOutDevice=dlg.m_paOutDevice;
     m_udpPort=dlg.m_udpPort;
     m_IQswap=dlg.m_IQswap;
-    m_10db=dlg.m_10db;
+    m_dB=dlg.m_dB;
     m_initIQplus=dlg.m_initIQplus;
     m_bIQxt=dlg.m_bIQxt;
     m_colors=dlg.m_colors;
@@ -732,7 +749,7 @@ void MainWindow::on_actionDeviceSetup_triggered()               //Setup Dialog
     m_wide_graph_window->m_mult570Tx=m_mult570Tx;
     m_wide_graph_window->m_cal570=m_cal570;
     soundInThread.setSwapIQ(m_IQswap);
-    soundInThread.set10db(m_10db);
+    soundInThread.setScale(m_dB);
 
     if(dlg.m_restartSoundIn) {
       soundInThread.quit();
@@ -997,30 +1014,30 @@ void MainWindow::stub()                                        //stub()
 void MainWindow::on_actionRelease_Notes_triggered()
 {
   QDesktopServices::openUrl(QUrl(
-  "https://www.physics.princeton.edu/pulsar/K1JT/Release_Notes.txt",
+  "https://wsjt.sourceforge.io/Release_Notes.txt",
                               QUrl::TolerantMode));
 }
 
 void MainWindow::on_actionOnline_Users_Guide_triggered()      //Display manual
 {
   QDesktopServices::openUrl(QUrl(
-  "https://www.physics.princeton.edu/pulsar/K1JT/MAP65_Users_Guide.pdf",
+  "https://wsjt.sourceforge.io/MAP65_Users_Guide.pdf",
                               QUrl::TolerantMode));
 }
 
 void MainWindow::on_actionQSG_Q65_triggered()
 {
-  QDesktopServices::openUrl (QUrl {"https://physics.princeton.edu/pulsar/k1jt/Q65_Quick_Start.pdf"});
+  QDesktopServices::openUrl (QUrl {"https://wsjt.sourceforge.io/Q65_Quick_Start.pdf"});
 }
 
 void MainWindow::on_actionQSG_MAP65_v3_triggered()
 {
-  QDesktopServices::openUrl (QUrl {"https://physics.princeton.edu/pulsar/k1jt/WSJTX_2.5.0_MAP65_3.0_Quick_Start.pdf"});
+  QDesktopServices::openUrl (QUrl {"https://wsjt.sourceforge.io/WSJTX_2.5.0_MAP65_3.0_Quick_Start.pdf"});
 }
 
 void MainWindow::on_actionQ65_Sensitivity_in_MAP65_3_0_triggered()
 {
-  QDesktopServices::openUrl (QUrl {"https://physics.princeton.edu/pulsar/k1jt/Q65_Sensitivity_in_MAP65.pdf"});
+  QDesktopServices::openUrl (QUrl {"https://wsjt.sourceforge.io/Q65_Sensitivity_in_MAP65.pdf"});
 }
 
 void MainWindow::on_actionAstro_Data_triggered()             //Display Astro
@@ -1119,6 +1136,9 @@ void MainWindow::diskDat()                                   //diskDat()
   //These may be redundant??
   m_diskData=true;
   datcom_.newdat=1;
+  if(m_wide_graph_window->m_bForceCenterFreq) {
+    datcom_.fcenter=m_wide_graph_window->m_dForceCenterFreq;
+  }
 
   if(m_fs96000) hsym=2048.0*96000.0/11025.0;   //Samples per JT65 half-symbol
   if(!m_fs96000) hsym=2048.0*95238.1/11025.0;
@@ -1396,6 +1416,8 @@ void MainWindow::readFromStdout()                             //readFromStdout
       QFile lockFile(m_appDir + "/.lock");
       lockFile.open(QIODevice::ReadWrite);
       if(t.indexOf("<DecodeFinished>") >= 0) {
+        int ndecodes=t.mid(40,5).toInt();
+        lab5->setText(QString::number(ndecodes));
         m_map65RxLog=0;
         m_startAnother=m_loopall;
       }
@@ -1403,6 +1425,8 @@ void MainWindow::readFromStdout()                             //readFromStdout
       decodeBusy(false);
       return;
     }
+
+    read_log();
 
     if(t.indexOf("!") >= 0) {
       int n=t.length();
@@ -1688,7 +1712,7 @@ void MainWindow::guiUpdate()
     QDateTime t = QDateTime::currentDateTimeUtc();
     int fQSO=m_wide_graph_window->QSOfreq();
     m_astro_window->astroUpdate(t, m_myGrid, m_hisGrid, fQSO, m_setftx,
-                          m_txFreq, m_azelDir);
+                          m_txFreq, m_azelDir, m_xavg);
     m_setftx=0;
     QString utc = t.date().toString(" yyyy MMM dd \n") + t.time().toString();
     ui->labUTC->setText(utc);
@@ -2343,4 +2367,25 @@ bool MainWindow::isGrid4(QString g)
   if(g.mid(2,1)<'0' or g.mid(2,1)>'9') return false;
   if(g.mid(3,1)<'0' or g.mid(3,1)>'9') return false;
   return true;
+}
+
+void MainWindow::read_log()
+{
+  // Update "m_worked" by reading wsjtx.log
+  m_worked.clear();                     //Start from scratch
+  QFile f("wsjtx.log");
+  f.open(QIODevice::ReadOnly);
+  if(f.isOpen()) {
+    QTextStream in(&f);
+    QString line,callsign;
+    for(int i=0; i<99999; i++) {
+      line=in.readLine();
+      if(line.length()<=0) break;
+      callsign=line.mid(40,6);
+      int n=callsign.indexOf(",");
+      if(n>0) callsign=callsign.left(n);
+      m_worked[callsign]=true;
+    }
+    f.close();
+  }
 }

@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1203</width>
-    <height>504</height>
+    <height>846</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -297,7 +297,7 @@
        </property>
        <layout class="QGridLayout" name="gridLayout_14">
         <item row="0" column="0">
-         <layout class="QVBoxLayout" name="L_Left" stretch="0,0,0,0,0,0">
+         <layout class="QVBoxLayout" name="L_Left" stretch="0,0,0,0,0">
           <item>
            <widget class="QLabel" name="lh_decodes_title_label">
             <property name="maximumSize">
@@ -322,141 +322,99 @@
            </widget>
           </item>
           <item>
-           <widget class="QLabel" name="lh_decodes_headings_label">
+           <widget class="RxTable" name="tableBand">
             <property name="minimumSize">
              <size>
-              <width>300</width>
-              <height>20</height>
+              <width>0</width>
+              <height>0</height>
              </size>
             </property>
-            <property name="maximumSize">
-             <size>
-              <width>16777215</width>
-              <height>20</height>
-             </size>
-            </property>
-            <property name="palette">
-             <palette>
-              <active>
-               <colorrole role="Base">
-                <brush brushstyle="SolidPattern">
-                 <color alpha="255">
-                  <red>252</red>
-                  <green>252</green>
-                  <blue>252</blue>
-                 </color>
-                </brush>
-               </colorrole>
-               <colorrole role="Window">
-                <brush brushstyle="SolidPattern">
-                 <color alpha="255">
-                  <red>170</red>
-                  <green>170</green>
-                  <blue>170</blue>
-                 </color>
-                </brush>
-               </colorrole>
-              </active>
-              <inactive>
-               <colorrole role="Base">
-                <brush brushstyle="SolidPattern">
-                 <color alpha="255">
-                  <red>252</red>
-                  <green>252</green>
-                  <blue>252</blue>
-                 </color>
-                </brush>
-               </colorrole>
-               <colorrole role="Window">
-                <brush brushstyle="SolidPattern">
-                 <color alpha="255">
-                  <red>170</red>
-                  <green>170</green>
-                  <blue>170</blue>
-                 </color>
-                </brush>
-               </colorrole>
-              </inactive>
-              <disabled>
-               <colorrole role="Base">
-                <brush brushstyle="SolidPattern">
-                 <color alpha="255">
-                  <red>170</red>
-                  <green>170</green>
-                  <blue>170</blue>
-                 </color>
-                </brush>
-               </colorrole>
-               <colorrole role="Window">
-                <brush brushstyle="SolidPattern">
-                 <color alpha="255">
-                  <red>170</red>
-                  <green>170</green>
-                  <blue>170</blue>
-                 </color>
-                </brush>
-               </colorrole>
-              </disabled>
-             </palette>
-            </property>
-            <property name="autoFillBackground">
-             <bool>true</bool>
-            </property>
-            <property name="text">
-             <string>UTC           dB            DT           Freq          Dr </string>
-            </property>
-            <property name="textFormat">
-             <enum>Qt::PlainText</enum>
-            </property>
-            <property name="indent">
-             <number>5</number>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="DisplayText" name="decodedTextBrowser">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-              <horstretch>0</horstretch>
-              <verstretch>10</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="minimumSize">
-             <size>
-              <width>150</width>
-              <height>50</height>
-             </size>
-            </property>
-            <property name="mouseTracking">
-             <bool>true</bool>
+            <property name="focusPolicy">
+             <enum>Qt::StrongFocus</enum>
             </property>
             <property name="contextMenuPolicy">
              <enum>Qt::ActionsContextMenu</enum>
             </property>
-            <property name="layoutDirection">
-             <enum>Qt::LeftToRight</enum>
+            <property name="styleSheet">
+             <string notr="true"/>
             </property>
-            <property name="autoFillBackground">
+            <property name="editTriggers">
+             <set>QAbstractItemView::NoEditTriggers</set>
+            </property>
+            <property name="tabKeyNavigation">
              <bool>false</bool>
             </property>
-            <property name="frameShape">
-             <enum>QFrame::StyledPanel</enum>
-            </property>
-            <property name="verticalScrollBarPolicy">
-             <enum>Qt::ScrollBarAlwaysOn</enum>
-            </property>
-            <property name="horizontalScrollBarPolicy">
-             <enum>Qt::ScrollBarAsNeeded</enum>
-            </property>
-            <property name="readOnly">
+            <property name="showDropIndicator" stdset="0">
              <bool>false</bool>
             </property>
-            <property name="cursorWidth">
-             <number>0</number>
+            <property name="dragDropOverwriteMode">
+             <bool>false</bool>
             </property>
-            <property name="textInteractionFlags">
-             <set>Qt::TextEditorInteraction</set>
+            <property name="alternatingRowColors">
+             <bool>false</bool>
             </property>
+            <property name="selectionMode">
+             <enum>QAbstractItemView::SingleSelection</enum>
+            </property>
+            <property name="selectionBehavior">
+             <enum>QAbstractItemView::SelectRows</enum>
+            </property>
+            <property name="showGrid">
+             <bool>false</bool>
+            </property>
+            <property name="gridStyle">
+             <enum>Qt::DashDotLine</enum>
+            </property>
+            <property name="cornerButtonEnabled">
+             <bool>true</bool>
+            </property>
+            <attribute name="horizontalHeaderDefaultSectionSize">
+             <number>100</number>
+            </attribute>
+            <attribute name="horizontalHeaderHighlightSections">
+             <bool>false</bool>
+            </attribute>
+            <attribute name="verticalHeaderDefaultSectionSize">
+             <number>20</number>
+            </attribute>
+            <attribute name="verticalHeaderHighlightSections">
+             <bool>false</bool>
+            </attribute>
+            <column>
+             <property name="text">
+              <string>UTC</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>dB</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>DT</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Freq</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>DXCC</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Distance</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Message</string>
+             </property>
+            </column>
            </widget>
           </item>
           <item>
@@ -480,58 +438,8 @@
              <property name="spacing">
               <number>4</number>
              </property>
-             <item row="3" column="8">
-              <widget class="QLineEdit" name="q_state">
-               <property name="maximumSize">
-                <size>
-                 <width>16777215</width>
-                 <height>21</height>
-                </size>
-               </property>
-              </widget>
-             </item>
-             <item row="3" column="7">
-              <widget class="QLabel" name="l_q_state">
-               <property name="text">
-                <string>State</string>
-               </property>
-               <property name="alignment">
-                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-               </property>
-              </widget>
-             </item>
-             <item row="3" column="1">
-              <widget class="QLineEdit" name="q_name">
-               <property name="maximumSize">
-                <size>
-                 <width>16777215</width>
-                 <height>21</height>
-                </size>
-               </property>
-              </widget>
-             </item>
-             <item row="4" column="1">
-              <widget class="QLineEdit" name="q_email">
-               <property name="maximumSize">
-                <size>
-                 <width>16777215</width>
-                 <height>21</height>
-                </size>
-               </property>
-              </widget>
-             </item>
-             <item row="3" column="0">
-              <widget class="QLabel" name="l_q_name">
-               <property name="text">
-                <string>Name</string>
-               </property>
-               <property name="alignment">
-                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-               </property>
-              </widget>
-             </item>
-             <item row="5" column="1">
-              <widget class="QLineEdit" name="ci_cqzone">
+             <item row="5" column="8">
+              <widget class="QLineEdit" name="ci_grid">
                <property name="maximumSize">
                 <size>
                  <width>16777215</width>
@@ -543,13 +451,64 @@
                </property>
               </widget>
              </item>
-             <item row="4" column="7">
-              <widget class="QLabel" name="l_q_zipcode">
+             <item row="2" column="6">
+              <widget class="QLineEdit" name="ci_dxcc">
+               <property name="maximumSize">
+                <size>
+                 <width>16777215</width>
+                 <height>21</height>
+                </size>
+               </property>
+               <property name="readOnly">
+                <bool>false</bool>
+               </property>
+              </widget>
+             </item>
+             <item row="6" column="5">
+              <widget class="QLabel" name="label_15">
                <property name="text">
-                <string>Zip</string>
+                <string>Bearing</string>
                </property>
                <property name="alignment">
                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item row="3" column="6">
+              <widget class="QLineEdit" name="q_addr1">
+               <property name="maximumSize">
+                <size>
+                 <width>16777215</width>
+                 <height>21</height>
+                </size>
+               </property>
+              </widget>
+             </item>
+             <item row="4" column="0">
+              <widget class="QLabel" name="l_q_email">
+               <property name="text">
+                <string>Email</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item row="6" column="8">
+              <widget class="QPushButton" name="q_button">
+               <property name="maximumSize">
+                <size>
+                 <width>16777215</width>
+                 <height>21</height>
+                </size>
+               </property>
+               <property name="font">
+                <font>
+                 <pointsize>7</pointsize>
+                </font>
+               </property>
+               <property name="text">
+                <string>CLEAR</string>
                </property>
               </widget>
              </item>
@@ -573,144 +532,10 @@
                </property>
               </widget>
              </item>
-             <item row="6" column="8">
-              <widget class="QPushButton" name="q_button">
-               <property name="maximumSize">
-                <size>
-                 <width>16777215</width>
-                 <height>21</height>
-                </size>
-               </property>
-               <property name="font">
-                <font>
-                 <pointsize>7</pointsize>
-                </font>
-               </property>
+             <item row="5" column="7">
+              <widget class="QLabel" name="label_11">
                <property name="text">
-                <string>CLEAR</string>
-               </property>
-              </widget>
-             </item>
-             <item row="2" column="7">
-              <widget class="QLabel" name="label_13">
-               <property name="text">
-                <string>Cont.</string>
-               </property>
-               <property name="alignment">
-                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-               </property>
-              </widget>
-             </item>
-             <item row="2" column="6">
-              <widget class="QLineEdit" name="ci_dxcc">
-               <property name="maximumSize">
-                <size>
-                 <width>16777215</width>
-                 <height>21</height>
-                </size>
-               </property>
-               <property name="readOnly">
-                <bool>false</bool>
-               </property>
-              </widget>
-             </item>
-             <item row="2" column="5">
-              <widget class="QLabel" name="label_17">
-               <property name="text">
-                <string>DXCC</string>
-               </property>
-               <property name="alignment">
-                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-               </property>
-              </widget>
-             </item>
-             <item row="2" column="0">
-              <widget class="QLabel" name="label_3">
-               <property name="text">
-                <string>DX Call</string>
-               </property>
-               <property name="alignment">
-                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-               </property>
-              </widget>
-             </item>
-             <item row="3" column="6">
-              <widget class="QLineEdit" name="q_addr1">
-               <property name="maximumSize">
-                <size>
-                 <width>16777215</width>
-                 <height>21</height>
-                </size>
-               </property>
-              </widget>
-             </item>
-             <item row="4" column="6">
-              <widget class="QLineEdit" name="q_addr2">
-               <property name="maximumSize">
-                <size>
-                 <width>16777215</width>
-                 <height>21</height>
-                </size>
-               </property>
-              </widget>
-             </item>
-             <item row="4" column="0">
-              <widget class="QLabel" name="l_q_email">
-               <property name="text">
-                <string>Email</string>
-               </property>
-               <property name="alignment">
-                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-               </property>
-              </widget>
-             </item>
-             <item row="3" column="5">
-              <widget class="QLabel" name="l_q_addr1">
-               <property name="text">
-                <string>Addr 1</string>
-               </property>
-               <property name="alignment">
-                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-               </property>
-              </widget>
-             </item>
-             <item row="4" column="5">
-              <widget class="QLabel" name="l_q_addr2">
-               <property name="text">
-                <string>Addr 2</string>
-               </property>
-               <property name="alignment">
-                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-               </property>
-              </widget>
-             </item>
-             <item row="6" column="0">
-              <widget class="QLabel" name="label_14">
-               <property name="text">
-                <string>Distance</string>
-               </property>
-               <property name="alignment">
-                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-               </property>
-              </widget>
-             </item>
-             <item row="5" column="6">
-              <widget class="QLineEdit" name="ci_ituzone">
-               <property name="maximumSize">
-                <size>
-                 <width>16777215</width>
-                 <height>21</height>
-                </size>
-               </property>
-               <property name="readOnly">
-                <bool>false</bool>
-               </property>
-              </widget>
-             </item>
-             <item row="5" column="5">
-              <widget class="QLabel" name="label_20">
-               <property name="text">
-                <string>ITU Zone</string>
+                <string>Grid</string>
                </property>
                <property name="alignment">
                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -730,59 +555,96 @@
                </property>
               </widget>
              </item>
-             <item row="6" column="6">
-              <widget class="QLineEdit" name="ci_bearing">
-               <property name="maximumSize">
-                <size>
-                 <width>16777215</width>
-                 <height>21</height>
-                </size>
-               </property>
-               <property name="readOnly">
-                <bool>false</bool>
-               </property>
-              </widget>
-             </item>
-             <item row="6" column="5">
-              <widget class="QLabel" name="label_15">
+             <item row="2" column="7">
+              <widget class="QLabel" name="label_13">
                <property name="text">
-                <string>Bearing</string>
+                <string>Cont.</string>
                </property>
                <property name="alignment">
                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
                </property>
               </widget>
              </item>
-             <item row="2" column="8">
-              <widget class="QLineEdit" name="ci_continent">
-               <property name="maximumSize">
-                <size>
-                 <width>16777215</width>
-                 <height>21</height>
-                </size>
-               </property>
-               <property name="readOnly">
-                <bool>false</bool>
-               </property>
-              </widget>
-             </item>
-             <item row="5" column="8">
-              <widget class="QLineEdit" name="ci_grid">
-               <property name="maximumSize">
-                <size>
-                 <width>16777215</width>
-                 <height>21</height>
-                </size>
-               </property>
-               <property name="readOnly">
-                <bool>false</bool>
-               </property>
-              </widget>
-             </item>
-             <item row="5" column="7">
-              <widget class="QLabel" name="label_11">
+             <item row="3" column="7">
+              <widget class="QLabel" name="l_q_state">
                <property name="text">
-                <string>Grid</string>
+                <string>State</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item row="5" column="1">
+              <widget class="QLineEdit" name="ci_cqzone">
+               <property name="maximumSize">
+                <size>
+                 <width>16777215</width>
+                 <height>21</height>
+                </size>
+               </property>
+               <property name="readOnly">
+                <bool>false</bool>
+               </property>
+              </widget>
+             </item>
+             <item row="3" column="5">
+              <widget class="QLabel" name="l_q_addr1">
+               <property name="text">
+                <string>Addr 1</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item row="4" column="7">
+              <widget class="QLabel" name="l_q_zipcode">
+               <property name="text">
+                <string>Zip</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item row="5" column="6">
+              <widget class="QLineEdit" name="ci_ituzone">
+               <property name="maximumSize">
+                <size>
+                 <width>16777215</width>
+                 <height>21</height>
+                </size>
+               </property>
+               <property name="readOnly">
+                <bool>false</bool>
+               </property>
+              </widget>
+             </item>
+             <item row="4" column="1">
+              <widget class="QLineEdit" name="q_email">
+               <property name="maximumSize">
+                <size>
+                 <width>16777215</width>
+                 <height>21</height>
+                </size>
+               </property>
+              </widget>
+             </item>
+             <item row="3" column="0">
+              <widget class="QLabel" name="l_q_name">
+               <property name="text">
+                <string>Name</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item row="4" column="5">
+              <widget class="QLabel" name="l_q_addr2">
+               <property name="text">
+                <string>Addr 2</string>
                </property>
                <property name="alignment">
                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -821,6 +683,102 @@
                 </widget>
                </item>
               </layout>
+             </item>
+             <item row="4" column="6">
+              <widget class="QLineEdit" name="q_addr2">
+               <property name="maximumSize">
+                <size>
+                 <width>16777215</width>
+                 <height>21</height>
+                </size>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="8">
+              <widget class="QLineEdit" name="ci_continent">
+               <property name="maximumSize">
+                <size>
+                 <width>16777215</width>
+                 <height>21</height>
+                </size>
+               </property>
+               <property name="readOnly">
+                <bool>false</bool>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="5">
+              <widget class="QLabel" name="label_17">
+               <property name="text">
+                <string>DXCC</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item row="3" column="8">
+              <widget class="QLineEdit" name="q_state">
+               <property name="maximumSize">
+                <size>
+                 <width>16777215</width>
+                 <height>21</height>
+                </size>
+               </property>
+              </widget>
+             </item>
+             <item row="6" column="0">
+              <widget class="QLabel" name="label_14">
+               <property name="text">
+                <string>Distance</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item row="3" column="1">
+              <widget class="QLineEdit" name="q_name">
+               <property name="maximumSize">
+                <size>
+                 <width>16777215</width>
+                 <height>21</height>
+                </size>
+               </property>
+              </widget>
+             </item>
+             <item row="6" column="6">
+              <widget class="QLineEdit" name="ci_bearing">
+               <property name="maximumSize">
+                <size>
+                 <width>16777215</width>
+                 <height>21</height>
+                </size>
+               </property>
+               <property name="readOnly">
+                <bool>false</bool>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="0">
+              <widget class="QLabel" name="label_3">
+               <property name="text">
+                <string>DX Call</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item row="5" column="5">
+              <widget class="QLabel" name="label_20">
+               <property name="text">
+                <string>ITU Zone</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               </property>
+              </widget>
              </item>
             </layout>
            </widget>
@@ -1050,7 +1008,7 @@ QLabel[oob=&quot;true&quot;] {
        </property>
        <layout class="QGridLayout" name="gridLayout_13">
         <item row="0" column="0">
-         <layout class="QVBoxLayout" name="L_Right" stretch="1,0,0,0">
+         <layout class="QVBoxLayout" name="L_Right" stretch="1,0,0,0,0">
           <item>
            <layout class="QVBoxLayout" name="L_Right_RXFrequency">
             <item>
@@ -1071,132 +1029,366 @@ QLabel[oob=&quot;true&quot;] {
              </widget>
             </item>
             <item>
-             <widget class="QLabel" name="rh_decodes_headings_label">
-              <property name="minimumSize">
-               <size>
-                <width>300</width>
-                <height>20</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>16777215</width>
-                <height>20</height>
-               </size>
-              </property>
-              <property name="palette">
-               <palette>
-                <active>
-                 <colorrole role="Base">
-                  <brush brushstyle="SolidPattern">
-                   <color alpha="255">
-                    <red>252</red>
-                    <green>252</green>
-                    <blue>252</blue>
-                   </color>
-                  </brush>
-                 </colorrole>
-                 <colorrole role="Window">
-                  <brush brushstyle="SolidPattern">
-                   <color alpha="255">
-                    <red>170</red>
-                    <green>170</green>
-                    <blue>170</blue>
-                   </color>
-                  </brush>
-                 </colorrole>
-                </active>
-                <inactive>
-                 <colorrole role="Base">
-                  <brush brushstyle="SolidPattern">
-                   <color alpha="255">
-                    <red>252</red>
-                    <green>252</green>
-                    <blue>252</blue>
-                   </color>
-                  </brush>
-                 </colorrole>
-                 <colorrole role="Window">
-                  <brush brushstyle="SolidPattern">
-                   <color alpha="255">
-                    <red>170</red>
-                    <green>170</green>
-                    <blue>170</blue>
-                   </color>
-                  </brush>
-                 </colorrole>
-                </inactive>
-                <disabled>
-                 <colorrole role="Base">
-                  <brush brushstyle="SolidPattern">
-                   <color alpha="255">
-                    <red>170</red>
-                    <green>170</green>
-                    <blue>170</blue>
-                   </color>
-                  </brush>
-                 </colorrole>
-                 <colorrole role="Window">
-                  <brush brushstyle="SolidPattern">
-                   <color alpha="255">
-                    <red>170</red>
-                    <green>170</green>
-                    <blue>170</blue>
-                   </color>
-                  </brush>
-                 </colorrole>
-                </disabled>
-               </palette>
-              </property>
-              <property name="autoFillBackground">
-               <bool>true</bool>
-              </property>
-              <property name="text">
-               <string>UTC           dB            DT           Freq          Dr </string>
-              </property>
-              <property name="textFormat">
-               <enum>Qt::PlainText</enum>
-              </property>
-              <property name="indent">
-               <number>5</number>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="DisplayText" name="decodedTextBrowser2">
-              <property name="enabled">
-               <bool>true</bool>
-              </property>
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
-                <horstretch>0</horstretch>
-                <verstretch>10</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="minimumSize">
-               <size>
-                <width>150</width>
-                <height>50</height>
-               </size>
-              </property>
+             <widget class="RxTable" name="tableRx">
               <property name="mouseTracking">
-               <bool>true</bool>
+               <bool>false</bool>
               </property>
               <property name="contextMenuPolicy">
                <enum>Qt::ActionsContextMenu</enum>
               </property>
-              <property name="verticalScrollBarPolicy">
-               <enum>Qt::ScrollBarAlwaysOn</enum>
+              <property name="editTriggers">
+               <set>QAbstractItemView::NoEditTriggers</set>
               </property>
-              <property name="cursorWidth">
-               <number>0</number>
+              <property name="tabKeyNavigation">
+               <bool>false</bool>
               </property>
-              <property name="textInteractionFlags">
-               <set>Qt::TextSelectableByKeyboard|Qt::TextSelectableByMouse</set>
+              <property name="showDropIndicator" stdset="0">
+               <bool>false</bool>
               </property>
+              <property name="dragDropOverwriteMode">
+               <bool>false</bool>
+              </property>
+              <property name="selectionMode">
+               <enum>QAbstractItemView::SingleSelection</enum>
+              </property>
+              <property name="selectionBehavior">
+               <enum>QAbstractItemView::SelectRows</enum>
+              </property>
+              <property name="horizontalScrollMode">
+               <enum>QAbstractItemView::ScrollPerItem</enum>
+              </property>
+              <property name="showGrid">
+               <bool>false</bool>
+              </property>
+              <property name="gridStyle">
+               <enum>Qt::DashDotLine</enum>
+              </property>
+              <attribute name="horizontalHeaderHighlightSections">
+               <bool>false</bool>
+              </attribute>
+              <attribute name="verticalHeaderDefaultSectionSize">
+               <number>20</number>
+              </attribute>
+              <attribute name="verticalHeaderHighlightSections">
+               <bool>false</bool>
+              </attribute>
+              <column>
+               <property name="text">
+                <string>UTC</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>dB</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>DT</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>Freq</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>DXCC</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>Distance</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>Message</string>
+               </property>
+              </column>
              </widget>
             </item>
            </layout>
+          </item>
+          <item>
+           <widget class="QGroupBox" name="hiddenGB">
+            <property name="maximumSize">
+             <size>
+              <width>16777215</width>
+              <height>50</height>
+             </size>
+            </property>
+            <property name="title">
+             <string>Hidden items</string>
+            </property>
+            <layout class="QVBoxLayout" name="verticalLayout_6">
+             <item>
+              <widget class="DisplayText" name="decodedTextBrowser2">
+               <property name="enabled">
+                <bool>true</bool>
+               </property>
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
+                 <horstretch>0</horstretch>
+                 <verstretch>10</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>150</width>
+                 <height>50</height>
+                </size>
+               </property>
+               <property name="mouseTracking">
+                <bool>true</bool>
+               </property>
+               <property name="contextMenuPolicy">
+                <enum>Qt::ActionsContextMenu</enum>
+               </property>
+               <property name="verticalScrollBarPolicy">
+                <enum>Qt::ScrollBarAlwaysOn</enum>
+               </property>
+               <property name="cursorWidth">
+                <number>0</number>
+               </property>
+               <property name="textInteractionFlags">
+                <set>Qt::TextSelectableByKeyboard|Qt::TextSelectableByMouse</set>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="DisplayText" name="decodedTextBrowser">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                 <horstretch>0</horstretch>
+                 <verstretch>10</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>150</width>
+                 <height>50</height>
+                </size>
+               </property>
+               <property name="mouseTracking">
+                <bool>true</bool>
+               </property>
+               <property name="contextMenuPolicy">
+                <enum>Qt::ActionsContextMenu</enum>
+               </property>
+               <property name="layoutDirection">
+                <enum>Qt::LeftToRight</enum>
+               </property>
+               <property name="autoFillBackground">
+                <bool>false</bool>
+               </property>
+               <property name="frameShape">
+                <enum>QFrame::StyledPanel</enum>
+               </property>
+               <property name="verticalScrollBarPolicy">
+                <enum>Qt::ScrollBarAlwaysOn</enum>
+               </property>
+               <property name="horizontalScrollBarPolicy">
+                <enum>Qt::ScrollBarAsNeeded</enum>
+               </property>
+               <property name="readOnly">
+                <bool>false</bool>
+               </property>
+               <property name="cursorWidth">
+                <number>0</number>
+               </property>
+               <property name="textInteractionFlags">
+                <set>Qt::TextEditorInteraction</set>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="rh_decodes_headings_label">
+               <property name="minimumSize">
+                <size>
+                 <width>300</width>
+                 <height>20</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>16777215</width>
+                 <height>20</height>
+                </size>
+               </property>
+               <property name="palette">
+                <palette>
+                 <active>
+                  <colorrole role="Base">
+                   <brush brushstyle="SolidPattern">
+                    <color alpha="255">
+                     <red>252</red>
+                     <green>252</green>
+                     <blue>252</blue>
+                    </color>
+                   </brush>
+                  </colorrole>
+                  <colorrole role="Window">
+                   <brush brushstyle="SolidPattern">
+                    <color alpha="255">
+                     <red>170</red>
+                     <green>170</green>
+                     <blue>170</blue>
+                    </color>
+                   </brush>
+                  </colorrole>
+                 </active>
+                 <inactive>
+                  <colorrole role="Base">
+                   <brush brushstyle="SolidPattern">
+                    <color alpha="255">
+                     <red>252</red>
+                     <green>252</green>
+                     <blue>252</blue>
+                    </color>
+                   </brush>
+                  </colorrole>
+                  <colorrole role="Window">
+                   <brush brushstyle="SolidPattern">
+                    <color alpha="255">
+                     <red>170</red>
+                     <green>170</green>
+                     <blue>170</blue>
+                    </color>
+                   </brush>
+                  </colorrole>
+                 </inactive>
+                 <disabled>
+                  <colorrole role="Base">
+                   <brush brushstyle="SolidPattern">
+                    <color alpha="255">
+                     <red>170</red>
+                     <green>170</green>
+                     <blue>170</blue>
+                    </color>
+                   </brush>
+                  </colorrole>
+                  <colorrole role="Window">
+                   <brush brushstyle="SolidPattern">
+                    <color alpha="255">
+                     <red>170</red>
+                     <green>170</green>
+                     <blue>170</blue>
+                    </color>
+                   </brush>
+                  </colorrole>
+                 </disabled>
+                </palette>
+               </property>
+               <property name="autoFillBackground">
+                <bool>true</bool>
+               </property>
+               <property name="text">
+                <string>UTC           dB            DT           Freq          Dr </string>
+               </property>
+               <property name="textFormat">
+                <enum>Qt::PlainText</enum>
+               </property>
+               <property name="indent">
+                <number>5</number>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="lh_decodes_headings_label">
+               <property name="minimumSize">
+                <size>
+                 <width>300</width>
+                 <height>20</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>16777215</width>
+                 <height>20</height>
+                </size>
+               </property>
+               <property name="palette">
+                <palette>
+                 <active>
+                  <colorrole role="Base">
+                   <brush brushstyle="SolidPattern">
+                    <color alpha="255">
+                     <red>252</red>
+                     <green>252</green>
+                     <blue>252</blue>
+                    </color>
+                   </brush>
+                  </colorrole>
+                  <colorrole role="Window">
+                   <brush brushstyle="SolidPattern">
+                    <color alpha="255">
+                     <red>170</red>
+                     <green>170</green>
+                     <blue>170</blue>
+                    </color>
+                   </brush>
+                  </colorrole>
+                 </active>
+                 <inactive>
+                  <colorrole role="Base">
+                   <brush brushstyle="SolidPattern">
+                    <color alpha="255">
+                     <red>252</red>
+                     <green>252</green>
+                     <blue>252</blue>
+                    </color>
+                   </brush>
+                  </colorrole>
+                  <colorrole role="Window">
+                   <brush brushstyle="SolidPattern">
+                    <color alpha="255">
+                     <red>170</red>
+                     <green>170</green>
+                     <blue>170</blue>
+                    </color>
+                   </brush>
+                  </colorrole>
+                 </inactive>
+                 <disabled>
+                  <colorrole role="Base">
+                   <brush brushstyle="SolidPattern">
+                    <color alpha="255">
+                     <red>170</red>
+                     <green>170</green>
+                     <blue>170</blue>
+                    </color>
+                   </brush>
+                  </colorrole>
+                  <colorrole role="Window">
+                   <brush brushstyle="SolidPattern">
+                    <color alpha="255">
+                     <red>170</red>
+                     <green>170</green>
+                     <blue>170</blue>
+                    </color>
+                   </brush>
+                  </colorrole>
+                 </disabled>
+                </palette>
+               </property>
+               <property name="autoFillBackground">
+                <bool>true</bool>
+               </property>
+               <property name="text">
+                <string>UTC           dB            DT           Freq          Dr </string>
+               </property>
+               <property name="textFormat">
+                <enum>Qt::PlainText</enum>
+               </property>
+               <property name="indent">
+                <number>5</number>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
           </item>
           <item>
            <layout class="QGridLayout" name="L_Right_Controls">
@@ -1732,7 +1924,29 @@ list. The list can be maintained in Settings (F2).</string>
                        <property name="spacing">
                         <number>5</number>
                        </property>
-                       <item row="0" column="1" rowspan="2">
+                       <item row="0" column="0">
+                        <widget class="DisplayText" name="houndQueueTextBrowser">
+                         <property name="sizePolicy">
+                          <sizepolicy hsizetype="MinimumExpanding" vsizetype="Expanding">
+                           <horstretch>0</horstretch>
+                           <verstretch>0</verstretch>
+                          </sizepolicy>
+                         </property>
+                         <property name="minimumSize">
+                          <size>
+                           <width>20</width>
+                           <height>0</height>
+                          </size>
+                         </property>
+                         <property name="maximumSize">
+                          <size>
+                           <width>80</width>
+                           <height>16777215</height>
+                          </size>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="0" column="2" rowspan="2">
                         <layout class="QGridLayout" name="gridLayout_10">
                          <property name="sizeConstraint">
                           <enum>QLayout::SetFixedSize</enum>
@@ -2016,23 +2230,23 @@ list. The list can be maintained in Settings (F2).</string>
                          </item>
                         </layout>
                        </item>
-                       <item row="0" column="0">
-                        <widget class="DisplayText" name="textBrowser4">
+                       <item row="0" column="1">
+                        <widget class="DisplayText" name="foxTxListTextBrowser">
                          <property name="sizePolicy">
-                          <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+                          <sizepolicy hsizetype="MinimumExpanding" vsizetype="Expanding">
                            <horstretch>0</horstretch>
                            <verstretch>0</verstretch>
                           </sizepolicy>
                          </property>
                          <property name="minimumSize">
                           <size>
-                           <width>50</width>
+                           <width>20</width>
                            <height>0</height>
                           </size>
                          </property>
                          <property name="maximumSize">
                           <size>
-                           <width>16777215</width>
+                           <width>80</width>
                            <height>16777215</height>
                           </size>
                          </property>
@@ -2423,6 +2637,16 @@ list. The list can be maintained in Settings (F2).</string>
                            </property>
                            <property name="singleStep">
                             <number>5</number>
+                           </property>
+                          </widget>
+                         </item>
+                         <item row="6" column="1">
+                          <widget class="QSpinBox" name="sbEchoAvg">
+                           <property name="prefix">
+                            <string>Avg</string>
+                           </property>
+                           <property name="value">
+                            <number>10</number>
                            </property>
                           </widget>
                          </item>
@@ -3467,7 +3691,7 @@ list. The list can be maintained in Settings (F2).</string>
                           </widget>
                          </item>
                          <item>
-                          <widget class="QComboBox" name="cb_autoCallPriority">
+                          <widget class="QComboBox" name="respondComboBox">
                            <property name="sizePolicy">
                             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                              <horstretch>0</horstretch>
@@ -3477,21 +3701,6 @@ list. The list can be maintained in Settings (F2).</string>
                            <property name="toolTip">
                             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Priority of automatic station selection:&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;- Last decoded: &lt;/span&gt;call last decoded station&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;- Distance: &lt;/span&gt;call the station with the longest distance&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;- Signal strength: &lt;/span&gt;call the station with the strongest signal&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                            </property>
-                           <item>
-                            <property name="text">
-                             <string>Last decoded</string>
-                            </property>
-                           </item>
-                           <item>
-                            <property name="text">
-                             <string>Signal strength</string>
-                            </property>
-                           </item>
-                           <item>
-                            <property name="text">
-                             <string>Distance</string>
-                            </property>
-                           </item>
                           </widget>
                          </item>
                         </layout>
@@ -5162,6 +5371,11 @@ list. The list can be maintained in Settings (F2).</string>
    <class>DoubleClickablePushButton</class>
    <extends>QPushButton</extends>
    <header>widgets/DoubleClickablePushButton.hpp</header>
+  </customwidget>
+  <customwidget>
+   <class>RxTable</class>
+   <extends>QTableWidget</extends>
+   <header>widgets/rxtable.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

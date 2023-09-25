@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>440</width>
-    <height>322</height>
+    <width>520</width>
+    <height>327</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -210,7 +210,7 @@
           </font>
          </property>
          <property name="text">
-          <string>Rpt Sent</string>
+          <string>Sent</string>
          </property>
          <property name="alignment">
           <set>Qt::AlignCenter</set>
@@ -242,7 +242,7 @@
           </font>
          </property>
          <property name="text">
-          <string>Rpt Rcvd</string>
+          <string>Rcvd</string>
          </property>
          <property name="alignment">
           <set>Qt::AlignCenter</set>
@@ -286,11 +286,20 @@
        </item>
        <item>
         <widget class="QLineEdit" name="grid">
+         <property name="minimumSize">
+          <size>
+           <width>110</width>
+           <height>0</height>
+          </size>
+         </property>
          <property name="maximumSize">
           <size>
-           <width>70</width>
+           <width>110</width>
            <height>16777215</height>
           </size>
+         </property>
+         <property name="text">
+          <string/>
          </property>
         </widget>
        </item>

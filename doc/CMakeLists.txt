@@ -62,6 +62,9 @@ set (UG_SRCS
   )
 
 set (UG_IMGS
+  images/active_stations.png
+  images/Add_Frequency.png
+  images/Add_station_info.png
   images/AstroData_2.png
   images/Astronomical_data.png
   images/auto-seq.png
@@ -71,7 +74,7 @@ set (UG_IMGS
   images/config-menu.png
   images/decode-menu.png
   images/download_samples.png
-  images/echo_144.png
+  images/Echo_1296.png
   images/EME_Deep_0.png
   images/EME_Deep_1.png
   images/EME_Deep_2.png

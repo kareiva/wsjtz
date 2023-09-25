@@ -10,6 +10,7 @@
 #include <QSqlTableModel>
 #include <QItemSelectionModel>
 #include <QItemSelection>
+#include <QTimer>
 #include "Configuration.hpp"
 #include "SettingsGroup.hpp"
 #include "MessageBox.hpp"
@@ -71,7 +72,7 @@ void AbstractLogWindow::impl::delete_QSOs ()
     {
       // We must work with source model indexes because we don't want row
       // removes to invalidate model indexes we haven't yet processed. We
-      // achieve that by processing them in decending row order.
+      // achieve that by processing them in descending row order.
       for (auto& row_index : row_indexes)
         {
           row_index = model_.mapToSource (row_index);
@@ -79,38 +80,47 @@ void AbstractLogWindow::impl::delete_QSOs ()
 
       // reverse sort by row
       std::sort (row_indexes.begin (), row_indexes.end (), row_is_higher);
+
       for (auto index : row_indexes)
         {
-          auto row = model_.mapFromSource (index).row ();
-          model_.removeRow (row);
-          self_->log_model_changed ();
+          auto row = model_.mapFromSource(index).row();
+          model_.removeRow(row);
+          self_->log_model_changed();
         }
     }
 }
+
 
 AbstractLogWindow::AbstractLogWindow (QString const& settings_key, QSettings * settings
                                       , Configuration const * configuration
                                       , QWidget * parent)
   : QWidget {parent}
-  , m_ {this, settings_key, settings, configuration}
-{
-  // this attempt to scroll to the last new record doesn't work, some
-  // sort of issue with model indexes and optimized DB fetches. For
-  // now sorting by the same column and direction as the underlying DB
-  // select and that DB select being in descending order so new rows
-  // at the end appear at view row 0 gets the job done
+  , m_ {this, settings_key, settings, configuration} {
+    // when we're viewing the log by contact ID (visually, up/down chevron in the column heading),
+    // when we add a contact, scroll the list to the top or bottom, depending on the sort order.
+    // If the table is sorted by some other criteria, don't change anything.
 
-  // // ensure view scrolls to latest new row
-  // connect (&m_->model_, &QAbstractItemModel::rowsInserted, this, [this] (QModelIndex const& parent, int first, int last) {
-  //     // note col 0 is hidden so use col 1
-  //     // queued connection required otherwise row may not be available
-  //     // in time
-  //     auto index = m_->model_.index (last, 1, parent);
-  //     if (m_->log_view_)
-  //       {
-  //         m_->log_view_->scrollTo (index);
-  //       }
-  //   }, Qt::QueuedConnection);
+    connect(&m_->model_, &QAbstractItemModel::rowsInserted, this,
+            [this](QModelIndex const &parent, int first, int last) {
+                (void) (parent); // UNUSED
+                (void) (first);  // UNUSED
+                (void) (last);   // UNUSED
+                QTimer::singleShot(0, [=] {
+                    // if we're sorting by the date, then show the most-recently logged contact.
+                    // Otherwise, leave the scroll alone
+                    auto horizontal_header = m_->log_view_->horizontalHeader ();
+                    if (horizontal_header->sortIndicatorSection() == 3) { // sorting on date?
+                        if (horizontal_header->sortIndicatorOrder() == Qt::AscendingOrder) {
+                            // we're sorting oldes->newest, so go to bottom
+                            m_->log_view_->scrollToBottom();
+                        } else {
+                            m_->log_view_->scrollToTop();
+                        }
+                    }
+
+                });
+            }
+    );
 }
 
 AbstractLogWindow::~AbstractLogWindow ()
@@ -134,11 +144,14 @@ void AbstractLogWindow::set_log_view (QTableView * log_view)
   log_view->setVerticalScrollMode (QAbstractItemView::ScrollPerPixel);
   m_->model_.setSourceModel (log_view->model ());
   log_view->setModel (&m_->model_);
-  log_view->setColumnHidden (0, true);
+  log_view->setColumnHidden (0, true); // hide the ID column
   auto horizontal_header = log_view->horizontalHeader ();
+
   horizontal_header->setResizeContentsPrecision (0); // visible region only
   horizontal_header->setSectionResizeMode (QHeaderView::ResizeToContents);
   horizontal_header->setSectionsMovable (true);
+  horizontal_header->setSortIndicator(3, Qt::AscendingOrder); // sort by the contact datetime oldest->newest
+
   auto vertical_header = log_view->horizontalHeader ();
   vertical_header->setResizeContentsPrecision (0); // visible region only
   vertical_header->setSectionResizeMode (QHeaderView::ResizeToContents);
@@ -149,6 +162,9 @@ void AbstractLogWindow::set_log_view (QTableView * log_view)
   connect (delete_action, &QAction::triggered, [this] (bool /*checked*/) {
       m_->delete_QSOs ();
     });
+
+  // scroll to bottom, since we're showing 1-N
+  log_view->scrollToBottom();
 }
 
 void AbstractLogWindow::set_log_view_font (QFont const& font)
